@@ -1,0 +1,29 @@
+# EdgeOS Configuration for Raspberry Pi
+# This file configures the Raspberry Pi boot process
+
+# Basic display settings
+hdmi_force_hotplug=1
+hdmi_drive=2
+
+# Memory split between CPU and GPU
+gpu_mem=128
+
+# Enable UART for debugging
+enable_uart=1
+
+# USB Gadget Mode for EdgeOS
+dtoverlay=dwc2
+
+# Audio settings
+dtparam=audio=on
+
+# Enable I2C and SPI if needed
+#dtparam=i2c_arm=on
+#dtparam=spi=on
+
+# Camera settings (uncomment if using camera)
+#start_x=1
+#gpu_mem=128
+
+# EdgeOS specific settings
+# Add any additional EdgeOS configurations here 

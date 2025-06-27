@@ -1,0 +1,18 @@
+[Unit]
+Description=EdgeOS Agent
+After=network-online.target edge-agent.service containerd.service
+Wants=network-online.target
+Requires=edge-agent.service containerd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/edge-agent
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Delegate=yes
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target 

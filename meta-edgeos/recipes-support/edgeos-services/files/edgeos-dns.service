@@ -1,0 +1,10 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+    <name replace-wildcards="yes">%h</name>
+    <service>
+        <type>_edgeos._udp</type>
+        <port>50051</port>
+        <txt-record>edgeosdevice=SOME_DEVICE_ID</txt-record>
+    </service>
+</service-group>
