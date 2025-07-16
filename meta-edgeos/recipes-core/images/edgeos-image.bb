@@ -1,73 +1,18 @@
-SUMMARY = "EdgeOS minimal image for Raspberry Pi"
-DESCRIPTION = "Minimal EdgeOS image with core functionality"
+DESCRIPTION = "Edge Image with WIC support"
+LICENSE = "MIT"
 
-inherit core-image
+inherit core-image image_types_wic partuuid
 
-# Accept restricted licenses for firmware
-LICENSE_FLAGS_ACCEPTED = "synaptics-killswitch"
+# Add our UUID variables to WICVARS so they're available to WKS file
+WICVARS:append = " EDGE_BOOT_PARTUUID EDGE_ROOT_PARTUUID"
 
-# Minimal packages for EdgeOS functionality
-IMAGE_INSTALL = " \
-    packagegroup-core-boot \
-    kernel-modules \
-    openssh \
-    curl \
-    wget \
-    ca-certificates \
-    tzdata \
-    util-linux \
-    procps \
-    avahi-daemon \
-    avahi-utils \
-    python3 \
-    bash \
-    networkmanager \
-    networkmanager-nmcli \
-    udev \
-    kmod \
-    findutils \
-    coreutils \
-    iproute2 \
-    iputils-ping \
-    file \
-    util-linux \
-    sed \
-    grep \
-    gawk \
-    tar \
-    systemd \
-    systemd-analyze \
-    busybox \
-    edgeos-services \
-    edge-agent \
-    edgeos-base \
-"
+IMAGE_FSTYPES += "wic"
+WKS_FILE = "rpi-partuuid.wks"
+WKS_FILES_PATH = "${THISDIR}/../../wic"
+WKS_FILE_DEPENDS += "gptfdisk"
 
-# Enable systemd and networking features
-DISTRO_FEATURES:append = " systemd wifi bluetooth"
-VIRTUAL-RUNTIME_init_manager = "systemd"
-VIRTUAL-RUNTIME_initscripts = ""
-
-# Image features
 IMAGE_FEATURES += "ssh-server-openssh"
+IMAGE_INSTALL += "packagegroup-core-boot vim"
 
-# Extra space for EdgeOS components
-IMAGE_ROOTFS_EXTRA_SPACE = "512000"
-
-# Raspberry Pi boot partition size (in KB) - increased for kernel + overlays
-BOOT_SPACE = "102400"
-
-# Image formats - include SD card image for Raspberry Pi
-IMAGE_FSTYPES = "tar.xz rpi-sdimg"
-
-# Set filesystem label for device-agnostic booting
-SDIMG_ROOTFS_LABEL = "edgeos-root"
-
-# Development features
-EXTRA_IMAGE_FEATURES += "debug-tweaks"
-
-# Set root password for development
-EXTRA_USERS_PARAMS = "usermod -P edge root;"
-
-# Disable problematic Pi-specific features
-MACHINE_FEATURES:remove = "vc4graphics" 
+EXTRA_IMAGEDEPENDS += "rpi-cmdline"
+do_image_wic[depends] += "rpi-cmdline:do_deploy wic-tools:do_populate_sysroot e2fsprogs-native:do_populate_sysroot"
