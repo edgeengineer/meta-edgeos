@@ -1,56 +1,47 @@
-# EdgeOS Yocto Implementation
+# EdgeOS Yocto PARTUUID Implementation
 
-This directory contains a complete Yocto-based implementation of EdgeOS for Raspberry Pi, providing the same functionality as the original pi-gen based system but using proper Yocto recipes and build system.
+This directory contains a Yocto-based implementation for Raspberry Pi 5 with proper PARTUUID support for reliable partition identification during boot.
 
 ## Overview
 
-EdgeOS is a custom Linux distribution designed for edge computing devices. This Yocto implementation includes:
+This implementation provides:
 
-- **USB Gadget Networking**: Automatic USB composite device creation with RNDIS/ECM networking
-- **Edge Agent**: Automatic download and management of the EdgeOS agent
-- **mDNS Discovery**: Device discoverable via `edgeos-device.local`
-- **SystemD Services**: Complete service management for all EdgeOS components
-- **User Management**: Pre-configured `edge` user with appropriate permissions
+- **Consistent PARTUUID Support**: Proper partition UUID assignment for reliable boot
+- **WIC Image Creation**: GPT-based disk images with stable partition identification
+- **Boot Reliability**: Eliminates partition numbering dependencies that can cause boot failures
+- **Raspberry Pi 5 Support**: Optimized for RPi5 hardware with proper boot configuration
 
 ## Architecture
 
-### Yocto Layers Structure
+### Yocto Layer Structure
 
 ```
 meta-edgeos/
+├── classes/
+│   └── partuuid.bbclass               # UUID generation and caching logic
 ├── conf/
-│   └── layer.conf                    # Layer configuration
+│   └── layer.conf                     # Layer configuration
 ├── recipes-core/
 │   ├── images/
-│   │   └── edgeos-image.bb          # Main image recipe
-│   ├── edgeos-base/
-│   │   └── edgeos-base.bb           # User and system setup
+│   │   └── edge-image.bb              # Main image recipe with WIC support
 │   └── base-files/
-│       ├── base-files_%.bbappend    # Custom fstab configuration
-│       └── base-files/
-│           └── fstab                # Custom fstab file
-├── recipes-support/
-│   └── edgeos-services/
-│       ├── edgeos-services.bb       # SystemD services and scripts
-│       └── files/                   # All EdgeOS configuration files
-├── recipes-connectivity/
-│   └── edge-agent/
-│       ├── edge-agent.bb            # Edge agent download and setup
-│       └── files/                   # Edge agent service files
-└── recipes-bsp/
-    └── bootfiles/
-        ├── rpi-config_git.bbappend  # Raspberry Pi USB gadget config
-        ├── rpi-cmdline.bbappend     # Boot command line modifications
-        └── files/
-            └── config.txt           # Raspberry Pi configuration
+│       ├── base-files_%.bbappend      # fstab PARTUUID substitution
+│       └── files/
+│           └── fstab                  # fstab template with UUID placeholders
+├── recipes-bsp/
+│   └── bootfiles/
+│       └── rpi-cmdline.bbappend       # cmdline.txt PARTUUID configuration
+└── wic/
+    └── rpi-partuuid.wks               # WIC kickstart file for partition creation
 ```
 
 ### Key Components
 
-1. **edgeos-services**: Installs all SystemD services, scripts, and configuration files
-2. **edge-agent**: Downloads and installs the EdgeOS agent binary
-3. **edgeos-base**: Creates the `edge` user and sets up basic system configuration
-4. **edgeos-image**: Main image recipe that combines all components
+1. **partuuid.bbclass**: Generates and caches consistent UUIDs across all recipes
+2. **edge-image.bb**: Main image recipe with WIC configuration and PARTUUID variables
+3. **base-files append**: Substitutes UUIDs in fstab for proper mount point identification
+4. **rpi-cmdline append**: Configures kernel command line with root PARTUUID
+5. **rpi-partuuid.wks**: WIC kickstart file that creates partitions with specified UUIDs
 
 ## Quick Start
 
