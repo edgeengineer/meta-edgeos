@@ -17,3 +17,9 @@ do_image_wic[depends] += "rpi-cmdline:do_deploy wic-tools:do_populate_sysroot e2
 # ensure the UUIDs task ran before building the .wic
 do_image_wic[depends] += "${PN}:do_generate_partuuids"
 
+EDGEOS_DEBUG ?= "1"
+EDGEOS_DEBUG_UART ?= "1"
+
+# A space-separated list of variable names that BitBake prints in the
+# “Build Configuration” banner at the start of a build.
+BUILDCFG_VARS += "EDGEOS_DEBUG EDGEOS_DEBUG_UART"
