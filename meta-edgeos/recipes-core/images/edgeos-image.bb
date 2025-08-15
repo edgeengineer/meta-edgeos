@@ -9,16 +9,19 @@ WKS_FILES_PATH = "${THISDIR}/../../wic"
 WKS_FILE_DEPENDS += "gptfdisk"
 
 IMAGE_FEATURES += "ssh-server-openssh"
-IMAGE_INSTALL += "packagegroup-core-boot vim"
+IMAGE_INSTALL += " \
+    packagegroup-edgeos-base \
+    packagegroup-edgeos-kernel \
+    packagegroup-edgeos-uboot \
+    packagegroup-edgeos-wifi \
+    packagegroup-edgeos-debug \
+    "
 
 EXTRA_IMAGEDEPENDS += "rpi-cmdline"
 do_image_wic[depends] += "rpi-cmdline:do_deploy wic-tools:do_populate_sysroot e2fsprogs-native:do_populate_sysroot"
 
 # ensure the UUIDs task ran before building the .wic
 do_image_wic[depends] += "${PN}:do_generate_partuuids"
-
-EDGEOS_DEBUG ?= "1"
-EDGEOS_DEBUG_UART ?= "1"
 
 # A space-separated list of variable names that BitBake prints in the
 # “Build Configuration” banner at the start of a build.
