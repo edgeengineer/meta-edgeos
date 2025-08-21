@@ -1,0 +1,271 @@
+name: Sync GitHub Issues to Linear
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  sync-to-linear:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Sync Issue to Linear
+        uses: actions/github-script@v7
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          LINEAR_TEAM_ID: ${{ secrets.LINEAR_TEAM_ID }}
+        with:
+          script: |
+            const linearApiKey = process.env.LINEAR_API_KEY;
+            const linearTeamId = process.env.LINEAR_TEAM_ID;
+            
+            if (!linearApiKey || !linearTeamId) {
+              console.log('LINEAR_API_KEY or LINEAR_TEAM_ID not configured');
+              return;
+            }
+
+            // Get issue data
+            const issue = context.payload.issue;
+            const action = context.payload.action;
+            
+            // Prepare Linear API request
+            const linearApiUrl = 'https://api.linear.app/graphql';
+            
+            // Function to make Linear API requests
+            async function linearRequest(query, variables = {}) {
+              const response = await fetch(linearApiUrl, {
+                method: 'POST',
+                headers: {
+                  'Authorization': linearApiKey,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query, variables })
+              });
+              
+              if (!response.ok) {
+                throw new Error(`Linear API error: ${response.statusText}`);
+              }
+              
+              return response.json();
+            }
+            
+            // Function to find existing Linear issue by GitHub URL
+            async function findLinearIssue(githubUrl) {
+              const query = `
+                query($url: String!) {
+                  issues(filter: { 
+                    description: { contains: $url }
+                  }) {
+                    nodes {
+                      id
+                      identifier
+                      title
+                      description
+                    }
+                  }
+                }
+              `;
+              
+              const result = await linearRequest(query, { url: githubUrl });
+              return result.data.issues.nodes.find(i => 
+                i.description && i.description.includes(githubUrl)
+              );
+            }
+            
+            // Function to create Linear issue
+            async function createLinearIssue(issue) {
+              const mutation = `
+                mutation($input: IssueCreateInput!) {
+                  issueCreate(input: $input) {
+                    success
+                    issue {
+                      id
+                      identifier
+                      url
+                    }
+                  }
+                }
+              `;
+              
+              const description = `
+            ${issue.body || 'No description provided'}
+
+            ---
+            🔗 **GitHub Issue**: ${issue.html_url}
+            👤 **Created by**: @${issue.user.login}
+            📅 **Created at**: ${new Date(issue.created_at).toLocaleString()}
+            🏷️ **Labels**: ${issue.labels.map(l => l.name).join(', ') || 'None'}
+              `.trim();
+              
+              const variables = {
+                input: {
+                  teamId: linearTeamId,
+                  title: `[GH#${issue.number}] ${issue.title}`,
+                  description: description,
+                  priority: getPriority(issue.labels),
+                  stateId: await getStateId(issue.state),
+                  labelIds: await getLabelIds(issue.labels),
+                }
+              };
+              
+              return linearRequest(mutation, variables);
+            }
+            
+            // Function to update Linear issue
+            async function updateLinearIssue(linearIssueId, issue) {
+              const mutation = `
+                mutation($id: String!, $input: IssueUpdateInput!) {
+                  issueUpdate(id: $id, input: $input) {
+                    success
+                    issue {
+                      id
+                      identifier
+                    }
+                  }
+                }
+              `;
+              
+              const description = `
+            ${issue.body || 'No description provided'}
+
+            ---
+            🔗 **GitHub Issue**: ${issue.html_url}
+            👤 **Created by**: @${issue.user.login}
+            📅 **Updated at**: ${new Date().toLocaleString()}
+            🏷️ **Labels**: ${issue.labels.map(l => l.name).join(', ') || 'None'}
+              `.trim();
+              
+              const variables = {
+                id: linearIssueId,
+                input: {
+                  title: `[GH#${issue.number}] ${issue.title}`,
+                  description: description,
+                  stateId: await getStateId(issue.state),
+                }
+              };
+              
+              return linearRequest(mutation, variables);
+            }
+            
+            // Function to add comment to Linear issue
+            async function addLinearComment(linearIssueId, comment) {
+              const mutation = `
+                mutation($issueId: String!, $body: String!) {
+                  commentCreate(input: { issueId: $issueId, body: $body }) {
+                    success
+                    comment {
+                      id
+                    }
+                  }
+                }
+              `;
+              
+              const body = `
+            **GitHub Comment** by @${comment.user.login}:
+            
+            ${comment.body}
+              `.trim();
+              
+              return linearRequest(mutation, { issueId: linearIssueId, body });
+            }
+            
+            // Helper function to determine priority based on labels
+            function getPriority(labels) {
+              const labelNames = labels.map(l => l.name.toLowerCase());
+              if (labelNames.includes('critical') || labelNames.includes('urgent')) return 1;
+              if (labelNames.includes('high-priority')) return 2;
+              if (labelNames.includes('medium-priority')) return 3;
+              if (labelNames.includes('low-priority')) return 4;
+              return 3; // Default to medium
+            }
+            
+            // Helper function to get Linear state ID
+            async function getStateId(githubState) {
+              // This is a simplified version - you'll need to query your actual Linear states
+              const query = `
+                query {
+                  workflowStates(filter: { team: { id: { eq: "${linearTeamId}" } } }) {
+                    nodes {
+                      id
+                      name
+                      type
+                    }
+                  }
+                }
+              `;
+              
+              const result = await linearRequest(query);
+              const states = result.data.workflowStates.nodes;
+              
+              if (githubState === 'closed') {
+                return states.find(s => s.type === 'completed')?.id || states[0].id;
+              } else {
+                return states.find(s => s.type === 'started')?.id || states[0].id;
+              }
+            }
+            
+            // Helper function to get Linear label IDs
+            async function getLabelIds(githubLabels) {
+              if (!githubLabels || githubLabels.length === 0) return [];
+              
+              const query = `
+                query {
+                  labels(filter: { team: { id: { eq: "${linearTeamId}" } } }) {
+                    nodes {
+                      id
+                      name
+                    }
+                  }
+                }
+              `;
+              
+              const result = await linearRequest(query);
+              const linearLabels = result.data.labels.nodes;
+              
+              return githubLabels
+                .map(ghLabel => linearLabels.find(ll => 
+                  ll.name.toLowerCase() === ghLabel.name.toLowerCase()
+                )?.id)
+                .filter(Boolean);
+            }
+            
+            // Main logic
+            try {
+              if (context.eventName === 'issues') {
+                const existingIssue = await findLinearIssue(issue.html_url);
+                
+                if (action === 'opened' && !existingIssue) {
+                  console.log('Creating new Linear issue...');
+                  const result = await createLinearIssue(issue);
+                  console.log(`Created Linear issue: ${result.data.issueCreate.issue.identifier}`);
+                  
+                  // Add a comment on GitHub with the Linear issue link
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `✅ This issue has been synced to Linear: ${result.data.issueCreate.issue.url}`
+                  });
+                } else if (existingIssue && (action === 'edited' || action === 'closed' || action === 'reopened')) {
+                  console.log('Updating existing Linear issue...');
+                  await updateLinearIssue(existingIssue.id, issue);
+                  console.log(`Updated Linear issue: ${existingIssue.identifier}`);
+                }
+              } else if (context.eventName === 'issue_comment' && action === 'created') {
+                const comment = context.payload.comment;
+                const existingIssue = await findLinearIssue(issue.html_url);
+                
+                if (existingIssue) {
+                  console.log('Adding comment to Linear issue...');
+                  await addLinearComment(existingIssue.id, comment);
+                  console.log(`Added comment to Linear issue: ${existingIssue.identifier}`);
+                }
+              }
+            } catch (error) {
+              console.error('Error syncing to Linear:', error);
+              core.setFailed(error.message);
+            }

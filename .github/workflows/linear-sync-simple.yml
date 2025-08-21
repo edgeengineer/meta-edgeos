@@ -1,0 +1,36 @@
+name: Linear Issue Sync
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: linear/linear-sync-action@v1
+        with:
+          linear-api-key: ${{ secrets.LINEAR_API_KEY }}
+          linear-team-id: ${{ secrets.LINEAR_TEAM_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional: Map GitHub labels to Linear labels
+          label-mapping: |
+            bug: Bug
+            enhancement: Feature
+            documentation: Documentation
+            high-priority: High Priority
+            urgent: Urgent
+            
+          # Optional: Map GitHub users to Linear users  
+          # user-mapping: |
+          #   github-username: linear-user-id
+          
+          # Optional: Custom title prefix
+          title-prefix: "[GH]"
+          
+          # Optional: Sync comments
+          sync-comments: true
+          
+          # Optional: Add GitHub metadata to Linear description
+          add-github-metadata: true
