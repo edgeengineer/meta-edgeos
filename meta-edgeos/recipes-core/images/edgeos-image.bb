@@ -17,6 +17,10 @@ IMAGE_INSTALL += " \
     packagegroup-edgeos-debug \
     "
 
+# enable USB peripheral (gadget) support
+ENABLE_DWC2_PERIPHERAL = "${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', '1', '0')}"
+IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', ' usb-gadget', '')}"
+
 EXTRA_IMAGEDEPENDS += "rpi-cmdline"
 do_image_wic[depends] += "rpi-cmdline:do_deploy wic-tools:do_populate_sysroot e2fsprogs-native:do_populate_sysroot"
 
@@ -25,4 +29,4 @@ do_image_wic[depends] += "${PN}:do_generate_partuuids"
 
 # A space-separated list of variable names that BitBake prints in the
 # “Build Configuration” banner at the start of a build.
-BUILDCFG_VARS += "EDGEOS_DEBUG EDGEOS_DEBUG_UART"
+BUILDCFG_VARS += "EDGEOS_DEBUG EDGEOS_DEBUG_UART EDGEOS_USB_GADGET"

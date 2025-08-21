@@ -1,0 +1,8 @@
+
+[Unit]
+Description=Unbind USB Gadget
+After=usb-gadget.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/usb-gadget.sh unbind

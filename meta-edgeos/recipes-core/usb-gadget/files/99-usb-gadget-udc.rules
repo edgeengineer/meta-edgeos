@@ -1,0 +1,4 @@
+# /etc/udev/rules.d/99-usb-gadget-udc.rules
+
+SUBSYSTEM=="udc", ACTION=="add",    TAG+="systemd", ENV{SYSTEMD_WANTS}+="usb-gadget-bind@%k.service"
+SUBSYSTEM=="udc", ACTION=="remove", TAG+="systemd", ENV{SYSTEMD_WANTS}+="usb-gadget-unbind.service"
