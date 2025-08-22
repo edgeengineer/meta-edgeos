@@ -20,28 +20,153 @@ meta-edgeos/
 ├── classes/
 │   └── partuuid.bbclass               # UUID generation and caching logic
 ├── conf/
+│   ├── distro/
+│   │   ├── edgeos.conf                # EdgeOS distribution configuration
+│   │   └── systemd.conf               # Systemd configuration
 │   └── layer.conf                     # Layer configuration
 ├── recipes-core/
 │   ├── images/
-│   │   └── edge-image.bb              # Main image recipe with WIC support
-│   └── base-files/
-│       ├── base-files_%.bbappend      # fstab PARTUUID substitution
-│       └── files/
-│           └── fstab                  # fstab template with UUID placeholders
+│   │   └── edgeos-image.bb            # Main image recipe with WIC support
+│   ├── packagegroups/
+│   │   ├── packagegroup-edgeos-base.bb     # Core system packages
+│   │   ├── packagegroup-edgeos-debug.bb    # Debug/development tools
+│   │   ├── packagegroup-edgeos-kernel.bb   # Kernel modules
+│   │   ├── packagegroup-edgeos-uboot.bb    # U-Boot support
+│   │   └── packagegroup-edgeos-wifi.bb     # WiFi support packages
+│   ├── base-files/
+│   │   ├── base-files_%.bbappend      # fstab PARTUUID substitution
+│   │   └── files/
+│   │       └── fstab                  # fstab template with UUID placeholders
+│   ├── systemd/
+│   │   └── systemd_%.bbappend         # Systemd customizations
+│   └── usb-gadget/
+│       ├── usb-gadget.bb              # USB Ethernet gadget configuration
+│       └── files/                     # USB gadget scripts and services
 ├── recipes-bsp/
 │   └── bootfiles/
-│       └── rpi-cmdline.bbappend       # cmdline.txt PARTUUID configuration
+│       ├── rpi-cmdline.bbappend       # cmdline.txt PARTUUID configuration
+│       └── rpi-config_%.bbappend      # config.txt for UART enablement
+├── recipes-support/
+│   └── htop/
+│       ├── htop_%.bbappend            # htop customization
+│       └── files/
+│           └── htoprc                 # Default htop configuration
 └── wic/
     └── rpi-partuuid.wks               # WIC kickstart file for partition creation
 ```
 
-### Key Components
+## Recipe Details
 
-1. **partuuid.bbclass**: Generates and caches consistent UUIDs across all recipes
-2. **edge-image.bb**: Main image recipe with WIC configuration and PARTUUID variables
-3. **base-files append**: Substitutes UUIDs in fstab for proper mount point identification
-4. **rpi-cmdline append**: Configures kernel command line with root PARTUUID
-5. **rpi-partuuid.wks**: WIC kickstart file that creates partitions with specified UUIDs
+### Core System Components
+
+#### **edgeos-image.bb** - Main System Image
+- **Purpose**: Defines the complete EdgeOS image with all required components
+- **Features**:
+  - Inherits WIC support for creating bootable SD card images
+  - Includes all EdgeOS packagegroups (base, kernel, debug, wifi, etc.)
+  - Configures USB gadget support when `EDGEOS_USB_GADGET=1`
+  - Sets up SSH server (OpenSSH) by default
+  - Defines build configuration variables for debugging and UART access
+
+#### **packagegroup-edgeos-base.bb** - Core System Packages
+- **Purpose**: Bundles essential system utilities and services
+- **Includes**:
+  - Core boot and extended base packages
+  - System utilities: `coreutils`, `util-linux`, `iproute2`
+  - Network manager: `connman`
+  - Development tools: `vim`, `libstdc++`
+  - Compression: `zstd`
+  - Timezone data: `tzdata`
+  - Conditional e2fsprogs tools when `EDGEOS_DEBUG=1`
+
+#### **packagegroup-edgeos-debug.bb** - Debug/Development Tools
+- **Purpose**: Provides debugging and performance analysis tools
+- **Conditional inclusion** (only when `EDGEOS_DEBUG=1`):
+  - Memory tools: `memtester`, `gperftools`
+  - Storage tools: `mmc-utils`, `fio`
+  - System monitoring: `htop`, `sysstat`, `procps`
+  - Real-time tests: `rt-tests`
+  - Network filesystem: `nfs-utils`
+  - Shell and utilities: `bash`, `ldd`, `bc`
+
+#### **packagegroup-edgeos-kernel.bb** - Kernel Modules
+- **Purpose**: Includes necessary kernel modules for hardware support
+- **Features**: Kernel module management and hardware drivers
+
+#### **packagegroup-edgeos-uboot.bb** - U-Boot Support
+- **Purpose**: Provides U-Boot bootloader support for advanced boot scenarios
+
+#### **packagegroup-edgeos-wifi.bb** - WiFi Support
+- **Purpose**: Bundles WiFi drivers and utilities for wireless connectivity
+
+### USB Gadget Support
+
+#### **usb-gadget.bb** - USB Ethernet Gadget
+- **Purpose**: Enables Raspberry Pi to act as USB Ethernet device when connected to a PC
+- **Components**:
+  - Main script: `usb-gadget.sh` - Configures USB gadget using configfs
+  - Systemd services:
+    - `usb-gadget-prepare.service` - Prepares gadget configuration
+    - `usb-gadget-bind@.service` - Binds gadget to UDC controller
+    - `usb-gadget-unbind.service` - Cleanly unbinds gadget
+  - Network configuration: `10-usb0.network` - Sets up DHCP server (192.168.7.1/24)
+  - udev rules: `99-usb-gadget-udc.rules` - Auto-triggers bind on UDC detection
+  - Helper script: `usb0-force-up` - Ensures usb0 interface comes up
+- **Result**: Creates dual ECM+RNDIS composite gadget for compatibility with all host OSes
+
+### Boot Configuration
+
+#### **partuuid.bbclass** - UUID Management
+- **Purpose**: Generates and caches consistent partition UUIDs across all recipes
+- **Features**:
+  - Creates deterministic UUIDs for boot and root partitions
+  - Caches UUIDs to ensure consistency across different recipe builds
+  - Provides `EDGE_BOOT_PARTUUID` and `EDGE_ROOT_PARTUUID` variables
+
+#### **rpi-cmdline.bbappend** - Kernel Command Line
+- **Purpose**: Configures boot parameters with PARTUUID support
+- **Modifications**:
+  - Replaces traditional `/dev/mmcblk0p2` with `PARTUUID=${EDGE_ROOT_PARTUUID}`
+  - Ensures reliable boot regardless of device enumeration
+  - Adds serial console configuration (115200 baud)
+  - Enables filesystem check and repair on boot
+
+#### **rpi-config_%.bbappend** - Raspberry Pi Config
+- **Purpose**: Enables UART for serial console access
+- **Adds**:
+  - `enable_uart=1` - Enables primary UART
+  - `dtoverlay=uart0` - Applies UART0 device tree overlay
+
+#### **base-files_%.bbappend** - Filesystem Table
+- **Purpose**: Configures mount points using PARTUUIDs
+- **Features**:
+  - Substitutes UUID placeholders in `/etc/fstab`
+  - Ensures partitions mount correctly using UUIDs instead of device names
+
+### System Configuration
+
+#### **systemd_%.bbappend** - Systemd Customization
+- **Purpose**: Configures systemd for EdgeOS requirements
+- **Potential modifications**:
+  - Network configuration
+  - Service dependencies
+  - System targets
+
+#### **htop_%.bbappend** - System Monitor Configuration
+- **Purpose**: Provides custom htop configuration
+- **Features**:
+  - Pre-configured layout and display options
+  - Custom color scheme for EdgeOS branding
+  - Optimized for embedded system monitoring
+
+### Image Creation
+
+#### **rpi-partuuid.wks** - WIC Kickstart File
+- **Purpose**: Defines partition layout for SD card image
+- **Structure**:
+  - Boot partition: FAT32, contains kernel, DTBs, config files
+  - Root partition: ext4, contains root filesystem
+  - Both partitions assigned specific UUIDs from partuuid.bbclass
 
 ## Quick Start
 

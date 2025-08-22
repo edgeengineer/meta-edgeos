@@ -41,6 +41,11 @@ prepare() {
   echo 0x0104 > "$G/idProduct"     # composite ID; fine for NCM testing
   echo 0x0200 > "$G/bcdUSB"
   echo 0x0100 > "$G/bcdDevice"
+  
+  # --- Device Class (CDC for macOS compatibility) ---
+  echo 0x02 > "$G/bDeviceClass"     # CDC Communications Device Class
+  echo 0x00 > "$G/bDeviceSubClass"  # No subclass
+  echo 0x00 > "$G/bDeviceProtocol"  # No protocol
 
   # --- Strings ---
   mkdir -p "$G/strings/$LANG"
@@ -50,7 +55,7 @@ prepare() {
 
   # --- One configuration ---
   mkdir -p "$G/configs/$CONF"
-  echo 120 > "$G/configs/$CONF/MaxPower"
+  echo 250 > "$G/configs/$CONF/MaxPower"  # 500mA - required for macOS compatibility
   mkdir -p "$G/configs/$CONF/strings/$LANG"
   echo "NCM-only" > "$G/configs/$CONF/strings/$LANG/configuration"
 
