@@ -174,41 +174,65 @@ meta-edgeos/
 
 - Yocto-compatible Linux system (Ubuntu 20.04+ recommended)
 - At least 50GB free disk space
-- 8GB+ RAM recommended
+- 8GB+ RAM (16GB recommended for parallel builds)
 - Fast internet connection for initial downloads
 
-### Local Build
+### Building EdgeOS
 
-1. **Initial Setup**:
+1. **Clone and Bootstrap**:
    ```bash
-   ./setup-yocto.sh           # Download Yocto core and required layers
-   ./create-meta-edgeos.sh    # Create meta-edgeos layer structure
-   ./init-build.sh            # Initialize build environment
+   git clone https://github.com/edgeengineer/meta-edgeos.git
+   cd meta-edgeos
+   ./bootstrap.sh
+   ```
+   This will download all required Yocto layers (poky, meta-raspberrypi, meta-openembedded).
+
+2. **Configure Build** (Optional):
+   ```bash
+   # The default configuration is already set for Raspberry Pi 5
+   # To enable USB gadget mode, add to build/conf/local.conf:
+   EDGEOS_USB_GADGET = "1"
    ```
 
-2. **Build EdgeOS Image**:
+3. **Initialize Build Environment**:
    ```bash
-   cd build-edgeos
+   source sources/poky/oe-init-build-env build
+   ```
+
+4. **Build the Image**:
+   ```bash
    bitbake edgeos-image
    ```
+   First build takes 2-4 hours depending on your system. Subsequent builds are much faster.
 
-3. **Flash to SD Card**:
+5. **Find the Built Image**:
    ```bash
-   sudo dd if=tmp/deploy/images/raspberrypi5/edgeos-image-raspberrypi5.rpi-sdimg of=/dev/sdX bs=4M status=progress
+   ls -lh tmp/deploy/images/raspberrypi5/edgeos-image-raspberrypi5.wic*
    ```
+   The `.wic` file is your complete disk image ready for flashing.
 
-### Remote Build (Recommended)
+### Flashing to Storage
+
+**To SD Card or NVMe**:
+```bash
+# Replace /dev/sdX with your actual device (use lsblk to find it)
+sudo dd if=tmp/deploy/images/raspberrypi5/edgeos-image-raspberrypi5.wic of=/dev/sdX bs=4M status=progress conv=fsync
+```
+
+### Remote Build (Optional)
 
 For faster builds on a dedicated server:
 
 ```bash
-./build-remote.sh
-```
+# Sync to build server (customize the destination)
+rsync -avz --exclude='tmp' --exclude='sstate-cache' --exclude='.git' --exclude='sources' --exclude='downloads' . user@build-server:~/yocto-rpi5
 
-This script will:
-- Sync the entire setup to `mihai@192.168.68.66`
-- Execute the build remotely
-- Provide instructions for downloading the built image
+# SSH to build server and build there
+ssh user@build-server
+cd ~/yocto-rpi5
+source sources/poky/oe-init-build-env build
+bitbake edgeos-image
+```
 
 ## Configuration
 
@@ -280,10 +304,24 @@ After successful build and boot:
 
 ### Common Build Issues
 
-1. **Layer Dependencies**: Ensure all required layers are in `conf/bblayers.conf`
-2. **Disk Space**: Yocto builds require significant disk space (50GB+)
-3. **Network Issues**: Check internet connection for downloads
-4. **Python Errors**: Ensure Python 3.8+ is available
+1. **Clean Rebuild After Major Changes**:
+   ```bash
+   bitbake -c cleansstate edgeos-image
+   rm -rf tmp/
+   bitbake edgeos-image
+   ```
+
+2. **USB Gadget Not Working**:
+   ```bash
+   # Ensure in local.conf:
+   EDGEOS_USB_GADGET = "1"
+   
+   # Check on device:
+   journalctl -u usb-gadget-prepare.service
+   ```
+
+3. **Disk Space**: Yocto builds require 50GB+ free space
+4. **Layer Dependencies**: All layers must be in `conf/bblayers.conf`
 
 ### Runtime Issues
 
