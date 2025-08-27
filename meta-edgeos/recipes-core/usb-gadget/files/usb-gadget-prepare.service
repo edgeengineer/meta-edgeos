@@ -1,0 +1,17 @@
+
+[Unit]
+Description=Prepare USB Gadget (NCM-only)
+After=sysinit.target local-fs.target systemd-udevd.service
+Wants=systemd-udevd.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/usb-gadget.sh prepare
+# Ensure udev sees the UDC and runs our bind unit, even if UDC existed first
+ExecStartPost=/usr/bin/udevadm control --reload
+ExecStartPost=/usr/bin/udevadm trigger --subsystem-match=udc --action=add
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
