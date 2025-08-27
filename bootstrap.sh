@@ -31,4 +31,5 @@ echo "Initializing build environment..."
 source sources/poky/oe-init-build-env build
 
 echo "Bootstrap complete. You can now run:"
-echo "  bitbake edge-image"
+echo "  source sources/poky/oe-init-build-env build"
+echo "  bitbake edgeos-image"

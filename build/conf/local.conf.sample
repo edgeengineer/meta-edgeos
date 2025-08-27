@@ -1,7 +1,7 @@
 MACHINE = "raspberrypi5"
 MACHINE ??= "qemux86-64"
 
-DISTRO ?= "poky"
+DISTRO ?= "edgeos"
 PACKAGE_CLASSES ?= "package_rpm"
 EXTRA_IMAGE_FEATURES ?= "debug-tweaks ssh-server-openssh"
 IMAGE_INSTALL:append = " vim"
