@@ -15,6 +15,7 @@ IMAGE_INSTALL += " \
     packagegroup-edgeos-uboot \
     packagegroup-edgeos-wifi \
     packagegroup-edgeos-debug \
+    packagegroup-edgeos-eeprom \
     "
 
 # enable USB peripheral (gadget) support
