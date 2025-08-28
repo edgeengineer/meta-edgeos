@@ -58,7 +58,7 @@ prepare() {
 
     # --- One configuration ---
     mkdir -p "$G/configs/$CONF"
-    echo 120 > "$G/configs/$CONF/MaxPower"
+    echo 250 > "$G/configs/$CONF/MaxPower"
     mkdir -p "$G/configs/$CONF/strings/$LANG"
     echo "NCM-only" > "$G/configs/$CONF/strings/$LANG/configuration"
 
