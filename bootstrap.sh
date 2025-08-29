@@ -23,12 +23,6 @@ pwd
 for f in bblayers.conf local.conf; do
   if [ ! -f "build/conf/$f" ]; then
     cp "build/conf/$f.sample" "build/conf/$f"
-    
-    # Fix the distro setting in local.conf to use edgeos instead of poky
-    if [ "$f" = "local.conf" ]; then
-      echo "Setting DISTRO to edgeos in local.conf..."
-      sed -i 's/^DISTRO ?= "poky"/DISTRO ?= "edgeos"/' "build/conf/$f"
-    fi
   fi
 done
 

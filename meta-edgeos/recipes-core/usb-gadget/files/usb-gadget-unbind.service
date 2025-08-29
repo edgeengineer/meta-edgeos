@@ -1,7 +1,7 @@
 
 [Unit]
 Description=Unbind USB Gadget
-After=usb-gadget.service
+After=usb-gadget-prepare.service
 
 [Service]
 Type=oneshot
