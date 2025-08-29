@@ -29,3 +29,5 @@ RASPBERRYPI_CAMERA_V3 = "1"
 # Use custom fstab with PARTUUID
 FILESEXTRAPATHS:prepend := "${THISDIR}/conf:"
 #SRC_URI:append:pn-base-files = " file://fstab.generated"
+EDGEOS_USB_GADGET = "1"
+VOLATILE_LOG_DIR = "no"
