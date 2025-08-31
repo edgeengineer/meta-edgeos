@@ -31,3 +31,8 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/conf:"
 EDGEOS_DEBUG = "0"
 EDGEOS_DEBUG_UART = "0"
 EDGEOS_USB_GADGET = "0"
+
+# By default, journal log is saved on volatile storage.
+# If the persistent approach is needed, a dedicated partition
+# should be used so that it doesn't impact the root filesystem.
+EDGEOS_PERSIST_JOURNAL_LOGS = "0"

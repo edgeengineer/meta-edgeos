@@ -30,7 +30,12 @@ do_image_wic[depends] += "${PN}:do_generate_partuuids"
 
 # A space-separated list of variable names that BitBake prints in the
 # “Build Configuration” banner at the start of a build.
-BUILDCFG_VARS += "EDGEOS_DEBUG EDGEOS_DEBUG_UART EDGEOS_USB_GADGET"
+BUILDCFG_VARS += " \
+    EDGEOS_DEBUG \
+    EDGEOS_DEBUG_UART \
+    EDGEOS_USB_GADGET \
+    EDGEOS_PERSIST_JOURNAL_LOGS \
+    "
 
 # Disable WIC's automatic fstab updates
 WIC_CREATE_EXTRA_ARGS = "--no-fstab-update"

@@ -1,13 +1,31 @@
 
+inherit journal-persist
+
 # make sure the systemd recipe builds the networkd subpackage
 PACKAGECONFIG:append = " networkd"
 
-do_install:append() {
-    # Create journal directory with proper permissions
-    install -d -m 2755 ${D}${localstatedir}/log/journal
+# systemd persistent log
+# Install the drop-in and tmpfiles rule ONLY when this feature is enabled.
+do_install:append:journal_persist-on() {
+    # journald drop-in to force persistence
+    install -d ${D}${sysconfdir}/systemd/journald.conf.d
+    cat > ${D}${sysconfdir}/systemd/journald.conf.d/10-persistent.conf << 'EOF'
+[Journal]
+# Persist logs under /var/log/journal
+Storage=persistent
+EOF
 
-    # Set the systemd-journal group ownership (will be fixed at runtime)
-    chown root:systemd-journal ${D}${localstatedir}/log/journal || true
+    # tmpfiles rule to ensure the directory exists with correct perms
+    install -d ${D}${libdir}/tmpfiles.d
+    cat > ${D}${libdir}/tmpfiles.d/50-journald-persistent.conf << 'EOF'
+# type path                 mode  user group             age argument
+d     /var/log/journal      2755  root systemd-journal   -   -
+EOF
 }
 
-FILES:${PN} += "${localstatedir}/log/journal"
+# systemd persistent log
+# Only ship these files when the feature is enabled.
+FILES:${PN}:append:journal_persist-on = " \
+    ${sysconfdir}/systemd/journald.conf.d/10-persistent.conf \
+    ${libdir}/tmpfiles.d/50-journald-persistent.conf \
+    "
