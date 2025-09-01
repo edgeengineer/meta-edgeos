@@ -1,16 +1,20 @@
 
 [Unit]
 Description=Prepare USB Gadget (NCM-only)
-After=sysinit.target local-fs.target systemd-udevd.service
-Wants=systemd-udevd.service
-DefaultDependencies=no
+After=sysinit.target local-fs.target systemd-udevd.service systemd-networkd.service
+Wants=systemd-udevd.service systemd-networkd.service
 
 [Service]
 Type=oneshot
 ExecStart=/usr/sbin/usb-gadget.sh prepare
-# Ensure udev sees the UDC and runs our bind unit, even if UDC existed first
-ExecStartPost=/usr/bin/udevadm control --reload
-ExecStartPost=/usr/bin/udevadm trigger --subsystem-match=udc --action=add
+
+# Bind right away (autodetects the UDC), then bring usb0 admin-UP
+ExecStartPost=/usr/sbin/usb-gadget.sh bind
+ExecStartPost=/usr/libexec/usb0-force-up
+
+# Clean teardown on shutdown/reboot
+ExecStop=/usr/sbin/usb-gadget.sh destroy
+
 RemainAfterExit=yes
 
 [Install]

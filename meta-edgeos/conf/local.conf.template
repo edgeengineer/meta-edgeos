@@ -1,10 +1,8 @@
-MACHINE = "raspberrypi5"
-MACHINE ??= "qemux86-64"
 
-DISTRO ?= "edgeos"
+MACHINE = "raspberrypi5"
+DISTRO = "edgeos"
 PACKAGE_CLASSES ?= "package_rpm"
 EXTRA_IMAGE_FEATURES ?= "debug-tweaks ssh-server-openssh"
-IMAGE_INSTALL:append = " vim"
 
 LICENSE_FLAGS_ACCEPTED = "commercial synaptics-killswitch"
 DL_DIR ?= "${TOPDIR}/../downloads"
@@ -29,5 +27,12 @@ RASPBERRYPI_CAMERA_V3 = "1"
 # Use custom fstab with PARTUUID
 FILESEXTRAPATHS:prepend := "${THISDIR}/conf:"
 #SRC_URI:append:pn-base-files = " file://fstab.generated"
-EDGEOS_USB_GADGET = "1"
-VOLATILE_LOG_DIR = "no"
+
+EDGEOS_DEBUG = "0"
+EDGEOS_DEBUG_UART = "0"
+EDGEOS_USB_GADGET = "0"
+
+# By default, journal log is saved on volatile storage.
+# If the persistent approach is needed, a dedicated partition
+# should be used so that it doesn't impact the root filesystem.
+EDGEOS_PERSIST_JOURNAL_LOGS = "0"
