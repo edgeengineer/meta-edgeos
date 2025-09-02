@@ -50,17 +50,31 @@ prepare() {
     echo 0x0200 > "$G/bcdUSB"
     echo 0x0100 > "$G/bcdDevice"
 
+    echo 0x02 > "$G/bDeviceClass"      # CDC composite class
+    echo 0x00 > "$G/bDeviceSubClass"
+    echo 0x00 > "$G/bDeviceProtocol"
+
+
     # --- Strings ---
     mkdir -p "$G/strings/$LANG"
-    echo "0123456789" > "$G/strings/$LANG/serialnumber"
-    echo "MyCompany"  > "$G/strings/$LANG/manufacturer"
-    echo "Pi5 NCM"    > "$G/strings/$LANG/product"
+    # Get device serial or use default
+    if [ -f /proc/device-tree/serial-number ]; then
+        SERIAL=$(cat /proc/device-tree/serial-number | tr -d '\0')
+    elif [ -f /etc/edgeos/device-uuid ]; then
+        SERIAL=$(cat /etc/edgeos/device-uuid | cut -c1-8)
+    else
+        SERIAL="0123456789"
+    fi
+    echo "$SERIAL" > "$G/strings/$LANG/serialnumber"
+    echo "EdgeOS"  > "$G/strings/$LANG/manufacturer"
+    echo "EdgeOS Device"    > "$G/strings/$LANG/product"
 
     # --- One configuration ---
     mkdir -p "$G/configs/$CONF"
     echo 250 > "$G/configs/$CONF/MaxPower"
     mkdir -p "$G/configs/$CONF/strings/$LANG"
     echo "NCM-only" > "$G/configs/$CONF/strings/$LANG/configuration"
+    echo 0x80 > "$G/configs/$CONF/bmAttributes" 
 
     # --- NCM function ---
     mkdir -p "$G/functions/$FUNC_NCM"

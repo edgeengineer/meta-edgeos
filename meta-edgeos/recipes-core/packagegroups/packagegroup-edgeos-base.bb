@@ -16,6 +16,8 @@ RDEPENDS:${PN} = " \
     zstd \
     iproute2 \
     vim \
+    edgeos-identity \
+    edgeos-user \
     "
 
 RDEPENDS:${PN}:append = " \
