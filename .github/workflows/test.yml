@@ -103,7 +103,7 @@ jobs:
   # Yocto environment tests - runs on all PRs
   # These tests validate recipe syntax and layer compatibility
   yocto-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # Use 22.04 to avoid AppArmor restrictions in 24.04
     timeout-minutes: 60
     needs: quick-validation
     steps:
@@ -124,6 +124,16 @@ jobs:
         run: |
           sudo locale-gen en_US.UTF-8
           sudo update-locale LANG=en_US.UTF-8
+          
+      - name: Fix AppArmor for BitBake
+        run: |
+          # Workaround for Ubuntu 24.04 AppArmor restrictions
+          # See: https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890
+          echo "Configuring AppArmor for BitBake..."
+          echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/99-bitbake.conf
+          sudo sysctl -p /etc/sysctl.d/99-bitbake.conf
+          # Alternative: disable user namespace restrictions
+          echo '0' | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns || true
           
       - name: Cache Yocto layers
         uses: actions/cache@v3
