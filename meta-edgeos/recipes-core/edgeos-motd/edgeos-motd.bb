@@ -36,19 +36,15 @@ fi
 EOF
     chmod 0755 ${D}${sysconfdir}/profile.d/motd.sh
     
-    # Create empty /etc/motd to prevent default motd
-    touch ${D}${sysconfdir}/motd
+    # Don't create /etc/motd here - it will be handled by base-files bbappend
 }
 
 # Package contents
 FILES:${PN} = "${sysconfdir}/update-motd.d/* \
-               ${sysconfdir}/profile.d/motd.sh \
-               ${sysconfdir}/motd"
+               ${sysconfdir}/profile.d/motd.sh"
 
 # Runtime dependencies
 # bash for the scripts, debianutils or busybox for run-parts
 RDEPENDS:${PN} = "bash debianutils-run-parts"
 
-# Ensure this runs after base-files
-RCONFLICTS:${PN} = "base-files-motd"
-RREPLACES:${PN} = "base-files-motd"
+# We work alongside base-files, no conflicts

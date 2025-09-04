@@ -12,6 +12,10 @@ do_install:append() {
     # Replace UUID placeholders with actual values
     sed -i 's/RPI_BOOT_UUID/${EDGE_BOOT_PARTUUID}/g' ${D}${sysconfdir}/fstab
     sed -i 's/RPI_ROOT_UUID/${EDGE_ROOT_PARTUUID}/g' ${D}${sysconfdir}/fstab
+    
+    # Clear the default motd file - our custom MOTD will be shown dynamically
+    # This prevents the static motd from conflicting with our dynamic one
+    echo "" > ${D}${sysconfdir}/motd
 }
 
 # Make UUID changes trigger rebuilds wherever they’re used
