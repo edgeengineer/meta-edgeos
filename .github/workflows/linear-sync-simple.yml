@@ -8,29 +8,19 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: linear/linear-sync-action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          linear-api-key: ${{ secrets.LINEAR_API_KEY }}
-          linear-team-id: ${{ secrets.LINEAR_TEAM_ID }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '18'
           
-          # Optional: Map GitHub labels to Linear labels
-          label-mapping: |
-            bug: Bug
-            enhancement: Feature
-            documentation: Documentation
-            high-priority: High Priority
-            urgent: Urgent
-            
-          # Optional: Map GitHub users to Linear users  
-          # user-mapping: |
-          #   github-username: linear-user-id
-          
-          # Optional: Custom title prefix
-          title-prefix: "[GH]"
-          
-          # Optional: Sync comments
-          sync-comments: true
-          
-          # Optional: Add GitHub metadata to Linear description
-          add-github-metadata: true
+      - name: Sync issue to Linear
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          LINEAR_TEAM_ID: ${{ secrets.LINEAR_TEAM_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          node sync-single-issue.js $ISSUE_NUMBER

@@ -1,15 +1,123 @@
-# EdgeOS Yocto PARTUUID Implementation
+# EdgeOS - Secure Edge Computing Platform
 
-This directory contains a Yocto-based implementation for Raspberry Pi 5 with proper PARTUUID support for reliable partition identification during boot.
+EdgeOS is a Yocto-based Linux distribution optimized for edge computing devices, starting with Raspberry Pi 5 support. It provides reliable boot mechanisms, USB gadget networking, and a foundation for secure edge applications.
 
-## Overview
+## Features
 
-This implementation provides:
+- **Reliable Boot System**: PARTUUID-based partition identification for consistent boot
+- **USB Gadget Networking**: Ethernet over USB for development and management
+- **EdgeOS Foundation**: Ready for device identity and branding features
+- **Secure by Default**: Minimal attack surface with optional debug features
+- **OTA Updates Ready**: Prepared for Mender integration (A/B updates)
+- **Development Friendly**: SSH access and debug tools
 
-- **Consistent PARTUUID Support**: Proper partition UUID assignment for reliable boot
-- **WIC Image Creation**: GPT-based disk images with stable partition identification
-- **Boot Reliability**: Eliminates partition numbering dependencies that can cause boot failures
-- **Raspberry Pi 5 Support**: Optimized for RPi5 hardware with proper boot configuration
+## Quick Start
+
+### Prerequisites
+
+- Linux build host (Ubuntu 20.04/22.04 or similar)
+- At least 50GB free disk space
+- 8GB+ RAM recommended
+- Required packages:
+  ```bash
+  sudo apt-get install gawk wget git diffstat unzip texinfo gcc build-essential \
+    chrpath socat cpio python3 python3-pip python3-pexpect xz-utils debianutils \
+    iputils-ping python3-git python3-jinja2 libegl1-mesa libsdl1.2-dev \
+    python3-subunit mesa-common-dev zstd liblz4-tool file locales libacl1
+  ```
+
+### Building EdgeOS
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/edgeengineer/meta-edgeos.git
+   cd meta-edgeos
+   ```
+
+2. **Run bootstrap to set up the build environment:**
+   ```bash
+   ./bootstrap.sh
+   ```
+   This will:
+   - Clone all required Yocto layers (poky, meta-openembedded, meta-raspberrypi)
+   - Set up the build directory with proper configuration
+   - Configure local.conf and bblayers.conf
+
+3. **Build the image:**
+   ```bash
+   source sources/poky/oe-init-build-env build
+   bitbake edgeos-image
+   ```
+   
+   The first build will take 1-3 hours depending on your hardware as it builds everything from source.
+
+4. **Find the built image:**
+   ```bash
+   ls -lh tmp/deploy/images/raspberrypi5/edgeos-image-raspberrypi5.rootfs.wic*
+   ```
+
+### Flashing to SD Card or NVMe
+
+#### Using bmaptool (Recommended - Faster)
+
+1. **Install bmaptool:**
+   ```bash
+   sudo apt-get install bmap-tools
+   # or
+   pip3 install bmaptool
+   ```
+
+2. **Create bmap file (if not already created):**
+   ```bash
+   cd tmp/deploy/images/raspberrypi5/
+   bmaptool create -o edgeos-image-raspberrypi5.rootfs.wic.bmap \
+                   edgeos-image-raspberrypi5.rootfs.wic
+   ```
+
+3. **Flash to device (SD card or USB-connected NVMe):**
+   ```bash
+   # For SD card (replace sdX with your device)
+   sudo bmaptool copy --bmap edgeos-image-raspberrypi5.rootfs.wic.bmap \
+                      edgeos-image-raspberrypi5.rootfs.wic /dev/sdX
+   
+   # For NVMe over USB adapter (replace sdX with your device)
+   sudo bmaptool copy --bmap edgeos-image-raspberrypi5.rootfs.wic.bmap \
+                      edgeos-image-raspberrypi5.rootfs.wic /dev/sdX
+   ```
+
+#### Using dd (Traditional Method)
+
+```bash
+# Decompress if needed
+gunzip -c edgeos-image-raspberrypi5.rootfs.wic.gz > edgeos-image-raspberrypi5.rootfs.wic
+
+# Flash to device (replace sdX with your device)
+sudo dd if=edgeos-image-raspberrypi5.rootfs.wic of=/dev/sdX bs=4M status=progress conv=fsync
+```
+
+### First Boot
+
+1. **Connect via USB gadget (USB-C port):**
+   - The device will appear as an Ethernet adapter on your host
+   - Device gets IP: `192.168.7.1`
+   - Your host gets IP: `192.168.7.2` (via DHCP)
+
+2. **SSH access:**
+   ```bash
+   # As root (no password in development mode)
+   ssh root@192.168.7.1
+   ```
+
+3. **Via network (if connected to same network):**
+   ```bash
+   # Replace raspberrypi5 with actual hostname
+   ssh root@raspberrypi5.local
+   ```
+
+### Default Access
+
+- **Root access:** No password in development mode (SSH key recommended for production)
+- **Note:** The `edge` user account is coming in a future release
 
 ## Architecture
 
