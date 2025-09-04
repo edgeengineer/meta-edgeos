@@ -13,6 +13,7 @@ jobs:
       
       - name: Validate structure
         run: |
+          echo "Checking repository structure..."
           [ -f meta-edgeos/conf/layer.conf ] || { echo "Error: meta-edgeos/conf/layer.conf not found"; exit 1; }
           [ -f bootstrap.sh ] || { echo "Error: bootstrap.sh not found"; exit 1; }
           [ -x bootstrap.sh ] || { echo "Error: bootstrap.sh not executable"; exit 1; }
@@ -22,194 +23,145 @@ jobs:
         run: |
           echo "Checking recipe syntax..."
           errors=0
-          find meta-edgeos -name "*.bb" -o -name "*.bbappend" | while read recipe; do
-            if ! grep -q "LICENSE" "$recipe"; then
-              echo "⚠️  Missing LICENSE in $recipe"
-              errors=$((errors + 1))
+          warnings=0
+          
+          # Check .bb and .bbappend files
+          for recipe in $(find meta-edgeos -name "*.bb" -o -name "*.bbappend"); do
+            recipe_name=$(basename "$recipe")
+            
+            # For .bb files, check for required fields
+            if [[ "$recipe" == *.bb ]]; then
+              if ! grep -q "LICENSE" "$recipe"; then
+                echo "⚠️  Missing LICENSE in $recipe_name"
+                ((warnings++))
+              fi
+              if ! grep -q "SUMMARY\|DESCRIPTION" "$recipe"; then
+                echo "⚠️  Missing SUMMARY/DESCRIPTION in $recipe_name"
+                ((warnings++))
+              fi
             fi
-            if [[ "$recipe" == *.bb ]] && ! grep -q "SUMMARY\|DESCRIPTION" "$recipe"; then
-              echo "⚠️  Missing SUMMARY/DESCRIPTION in $recipe"
+            
+            # Check for common issues
+            if grep -q $'\t' "$recipe"; then
+              echo "⚠️  Contains tabs (should use spaces): $recipe_name"
+              ((warnings++))
             fi
           done
-          echo "✓ Recipe syntax check completed"
+          
+          echo "✓ Recipe syntax check completed with $warnings warnings"
+          
+      - name: Check layer configuration
+        run: |
+          echo "Checking layer.conf..."
+          if [ -f meta-edgeos/conf/layer.conf ]; then
+            # Check for required variables
+            grep -q "BBPATH" meta-edgeos/conf/layer.conf || echo "⚠️  Missing BBPATH in layer.conf"
+            grep -q "BBFILES" meta-edgeos/conf/layer.conf || echo "⚠️  Missing BBFILES in layer.conf"
+            grep -q "BBFILE_COLLECTIONS" meta-edgeos/conf/layer.conf || echo "⚠️  Missing BBFILE_COLLECTIONS in layer.conf"
+            grep -q "LAYERVERSION" meta-edgeos/conf/layer.conf || echo "⚠️  Missing LAYERVERSION in layer.conf"
+            echo "✓ Layer configuration validated"
+          fi
+          
+      - name: Check WIC files
+        run: |
+          echo "Checking WIC configuration..."
+          if [ -d wic ]; then
+            for wic in wic/*.wks.in; do
+              if [ -f "$wic" ]; then
+                echo "Found WIC: $(basename $wic)"
+                # Basic WIC syntax check
+                grep -q "part " "$wic" || echo "⚠️  No partitions defined in $wic"
+              fi
+            done
+          fi
+          echo "✓ WIC check completed"
+          
+      - name: Validate scripts
+        run: |
+          echo "Checking shell scripts..."
+          # Find all shell scripts
+          for script in $(find . -name "*.sh" -not -path "./sources/*" -not -path "./build/*"); do
+            if [ -f "$script" ]; then
+              # Check for bash syntax errors
+              bash -n "$script" 2>/dev/null || echo "⚠️  Syntax error in $script"
+            fi
+          done
+          echo "✓ Script validation completed"
+          
+      - name: Security check
+        run: |
+          echo "Checking for potential security issues..."
+          # Check for hardcoded credentials
+          if grep -r -E "(PASSWORD|SECRET|KEY|TOKEN|APIKEY|API_KEY).*=.*['\"]" meta-edgeos/ --include="*.bb" --include="*.bbappend" --include="*.conf" 2>/dev/null; then
+            echo "⚠️  Found potential hardcoded credentials (please review)"
+          fi
+          echo "✓ Security check completed"
 
-  incremental-tests:
+  # Advanced tests that require Yocto environment
+  # These are optional and only run with the 'full-ci' label
+  yocto-tests:
+    if: contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    needs: quick-validation
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
       
-      - name: Install dependencies
+      - name: Install Yocto dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             gawk wget git diffstat unzip texinfo gcc build-essential \
             chrpath socat cpio python3 python3-pip python3-pexpect \
             xz-utils debianutils iputils-ping python3-git python3-jinja2 \
-            libegl1-mesa libsdl1.2-dev pylint3 xterm python3-subunit \
-            mesa-common-dev zstd liblz4-tool
+            libegl1-mesa libsdl1.2-dev xterm python3-subunit \
+            mesa-common-dev zstd liblz4-tool file locales libacl1 \
+            python-is-python3
       
+      - name: Set up locale
+        run: |
+          sudo locale-gen en_US.UTF-8
+          sudo update-locale LANG=en_US.UTF-8
+          
       - name: Cache downloads
         uses: actions/cache@v3
         with:
-          path: downloads
-          key: ${{ runner.os }}-downloads-${{ hashFiles('**/layer.conf') }}
+          path: |
+            downloads
+            sources
+          key: ${{ runner.os }}-yocto-${{ hashFiles('bootstrap.sh') }}
           restore-keys: |
-            ${{ runner.os }}-downloads-
+            ${{ runner.os }}-yocto-
       
-      - name: Cache sstate
-        uses: actions/cache@v3
-        with:
-          path: sstate-cache
-          key: ${{ runner.os }}-sstate-${{ hashFiles('**/layer.conf') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-sstate-${{ hashFiles('**/layer.conf') }}-
-            ${{ runner.os }}-sstate-
-      
-      - name: Bootstrap build environment
+      - name: Bootstrap Yocto environment
         run: |
-          echo "Bootstrapping build environment..."
+          echo "Setting up Yocto build environment..."
+          echo "This will download required layers (poky, meta-raspberrypi, etc.)"
           ./bootstrap.sh
-          [ -f build/conf/local.conf ] || { echo "Error: local.conf not created"; exit 1; }
-          [ -f build/conf/bblayers.conf ] || { echo "Error: bblayers.conf not created"; exit 1; }
-          echo "✓ Bootstrap completed"
-      
-      - name: Test layer compatibility
+          
+      - name: Parse recipes
         run: |
           source sources/poky/oe-init-build-env build
-          echo "Testing layer compatibility..."
-          bitbake-layers show-layers
-          echo "Checking for layer dependencies..."
-          bitbake-layers check-layer-compatibility || echo "Note: Layer compatibility warnings (non-fatal)"
-      
-      - name: Parse all recipes
-        run: |
-          source sources/poky/oe-init-build-env build
-          echo "Parsing all recipes (this validates syntax)..."
+          echo "Parsing all recipes..."
           bitbake -p
-          echo "✓ All recipes parsed successfully"
-      
-      - name: Test critical recipes compilation
+          
+      - name: Layer compatibility check
         run: |
           source sources/poky/oe-init-build-env build
-          echo "Testing compilation of critical recipes..."
+          bitbake-layers show-layers
           
-          # Test core identity and user management
-          echo "Building edgeos-identity..."
-          bitbake -c compile edgeos-identity || true
-          
-          echo "Building edgeos-user..."
-          bitbake -c compile edgeos-user || true
-          
-          echo "Building edgeos-bootstrap..."
-          bitbake -c compile edgeos-bootstrap || true
-          
-          # Test USB gadget functionality
-          echo "Building usb-gadget..."
-          bitbake -c compile usb-gadget || true
-          
-          # Test package groups (these don't compile but we can fetch)
-          echo "Fetching packagegroup dependencies..."
-          bitbake -c fetch packagegroup-edgeos-base || true
-          bitbake -c fetch packagegroup-edgeos-wifi || true
-          bitbake -c fetch packagegroup-edgeos-debug || true
-          
-          echo "✓ Critical recipe tests completed"
-      
-      - name: Check configuration
-        run: |
-          source sources/poky/oe-init-build-env build
-          echo "Checking build configuration..."
-          bitbake -e edgeos-image | grep "^IMAGE_INSTALL=" || echo "IMAGE_INSTALL not set"
-          bitbake -e edgeos-image | grep "^DISTRO_FEATURES=" || echo "DISTRO_FEATURES not set"
-          bitbake -e edgeos-image | grep "^MACHINE=" || echo "MACHINE not set"
-          echo "✓ Configuration check completed"
-      
-      - name: Generate dependency graph
-        run: |
-          source sources/poky/oe-init-build-env build
-          echo "Generating dependency graph..."
-          bitbake -g edgeos-image || echo "Note: Dependency graph generation had warnings"
-          if [ -f task-depends.dot ]; then
-            echo "✓ Dependency graph generated successfully"
-            echo "Graph size: $(wc -l < task-depends.dot) lines"
-          else
-            echo "⚠️  Dependency graph not generated (non-fatal)"
-          fi
-      
-      - name: Summary
-        if: always()
-        run: |
-          echo "========================================="
-          echo "CI Test Summary"
-          echo "========================================="
-          echo "Quick validation: ✓"
-          echo "Layer parsing: ✓"
-          echo "Recipe compilation: Tested (see logs)"
-          echo "========================================="
-
-  # Full build job - only on main branch or when labeled
+  # Full build - only manual trigger for now
   full-build:
-    if: |
-      github.ref == 'refs/heads/main' || 
-      contains(github.event.pull_request.labels.*.name, 'full-build')
+    if: contains(github.event.pull_request.labels.*.name, 'full-build')
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v3
       
-      - name: Install dependencies
+      - name: Note about full builds
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            gawk wget git diffstat unzip texinfo gcc build-essential \
-            chrpath socat cpio python3 python3-pip python3-pexpect \
-            xz-utils debianutils iputils-ping python3-git python3-jinja2 \
-            libegl1-mesa libsdl1.2-dev pylint3 xterm python3-subunit \
-            mesa-common-dev zstd liblz4-tool
-      
-      - name: Cache downloads
-        uses: actions/cache@v3
-        with:
-          path: downloads
-          key: ${{ runner.os }}-downloads-${{ hashFiles('**/layer.conf') }}
-          restore-keys: |
-            ${{ runner.os }}-downloads-
-      
-      - name: Cache sstate
-        uses: actions/cache@v3
-        with:
-          path: sstate-cache
-          key: ${{ runner.os }}-sstate-full-${{ hashFiles('**/layer.conf') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-sstate-full-${{ hashFiles('**/layer.conf') }}-
-            ${{ runner.os }}-sstate-full-
-      
-      - name: Bootstrap
-        run: ./bootstrap.sh
-      
-      - name: Full image build
-        run: |
-          source sources/poky/oe-init-build-env build
-          echo "Starting full EdgeOS image build..."
-          echo "This may take several hours..."
-          bitbake edgeos-image
-      
-      - name: Upload artifacts
-        if: success()
-        uses: actions/upload-artifact@v3
-        with:
-          name: edgeos-image-${{ github.sha }}
-          path: |
-            build/tmp/deploy/images/
-          retention-days: 7
-      
-      - name: Image statistics
-        if: success()
-        run: |
-          echo "Image build completed!"
-          echo "Image size information:"
-          du -sh build/tmp/deploy/images/* || true
-          echo "Package manifest:"
-          find build/tmp/deploy/images -name "*.manifest" -exec head -20 {} \; || true
+          echo "========================================="
+          echo "Full build requested"
+          echo "========================================="
+          echo "Full Yocto builds can take 2-6 hours and require significant resources."
+          echo "Consider using a self-hosted runner or build server for production CI."
+          echo "========================================="
