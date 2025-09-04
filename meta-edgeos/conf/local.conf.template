@@ -1,22 +1,33 @@
+# EdgeOS Build Configuration Template
+#
+# This file is the template for local.conf used by bootstrap.sh
+# to set up new build environments.
 
+# Target machine - Raspberry Pi 5 by default
 MACHINE = "raspberrypi5"
+# For emulation/testing: MACHINE = "qemux86-64"
+
+# EdgeOS distribution
 DISTRO = "edgeos"
+
+# Package format and features
 PACKAGE_CLASSES ?= "package_rpm"
 EXTRA_IMAGE_FEATURES ?= "debug-tweaks ssh-server-openssh"
 
+# License acceptance for required components
 LICENSE_FLAGS_ACCEPTED = "commercial synaptics-killswitch"
+
+# Build directories (shared across builds)
 DL_DIR ?= "${TOPDIR}/../downloads"
 SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
-
 TMPDIR ?= "${TOPDIR}/tmp"
 
+# WIC image configuration for Raspberry Pi
 WKS_FILE = "rpi-partuuid.wks"
 WKS_FILE_DEPENDS += "gptfdisk"
-IMAGE_FSTYPES:append = " wic"
+IMAGE_FSTYPES:append = " wic wic.bmap"
 
-SYSLINUX_SERIAL = ""
-
-#####
+# Raspberry Pi specific configuration
 DISABLE_RPI_BOOT_LOGO = "1"
 DISABLE_SPLASH = "1"
 DISABLE_OVERSCAN = "1"
@@ -24,15 +35,20 @@ ENABLE_DWC2_PERIPHERAL = "1"
 RASPBERRYPI_CAMERA_V2 = "1"
 RASPBERRYPI_CAMERA_V3 = "1"
 
-# Use custom fstab with PARTUUID
-FILESEXTRAPATHS:prepend := "${THISDIR}/conf:"
-#SRC_URI:append:pn-base-files = " file://fstab.generated"
+# EdgeOS feature flags
+EDGEOS_DEBUG = "1"
+EDGEOS_DEBUG_UART = "1"
+EDGEOS_USB_GADGET = "1"
+EDGEOS_PERSIST_JOURNAL_LOGS = "1"
 
-EDGEOS_DEBUG = "0"
-EDGEOS_DEBUG_UART = "0"
-EDGEOS_USB_GADGET = "0"
+# EdgeOS branding configuration (can be overridden)
+# EDGEOS_HOSTNAME = "edgeos-device"
+# EDGEOS_BUILD_ID = "${DATETIME}"
 
-# By default, journal log is saved on volatile storage.
-# If the persistent approach is needed, a dedicated partition
-# should be used so that it doesn't impact the root filesystem.
-EDGEOS_PERSIST_JOURNAL_LOGS = "0"
+# Development settings (remove for production)
+# Allows root login without password via SSH
+EXTRA_IMAGE_FEATURES:append = " debug-tweaks"
+
+# Uncomment for production builds:
+# EXTRA_IMAGE_FEATURES:remove = "debug-tweaks"
+# EDGEOS_DEBUG = "0"
