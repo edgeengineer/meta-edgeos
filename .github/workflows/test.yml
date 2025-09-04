@@ -29,11 +29,14 @@ jobs:
           for recipe in $(find meta-edgeos -name "*.bb" -o -name "*.bbappend"); do
             recipe_name=$(basename "$recipe")
             
-            # For .bb files, check for required fields
+            # For .bb files, check for required fields (skip packagegroups and images)
             if [[ "$recipe" == *.bb ]]; then
-              if ! grep -q "LICENSE" "$recipe"; then
-                echo "⚠️  Missing LICENSE in $recipe_name"
-                ((warnings++))
+              # Skip packagegroup and image recipes for LICENSE check
+              if [[ "$recipe_name" != packagegroup-*.bb ]] && [[ "$recipe_name" != *-image*.bb ]]; then
+                if ! grep -q "LICENSE" "$recipe"; then
+                  echo "⚠️  Missing LICENSE in $recipe_name"
+                  ((warnings++))
+                fi
               fi
               if ! grep -q "SUMMARY\|DESCRIPTION" "$recipe"; then
                 echo "⚠️  Missing SUMMARY/DESCRIPTION in $recipe_name"
