@@ -1,0 +1,16 @@
+[Unit]
+Description=EdgeOS Device Identity Setup
+DefaultDependencies=no
+Before=sysinit.target
+After=local-fs.target
+ConditionPathExists=!/etc/edgeos/device-uuid
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/generate-uuid.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=sysinit.target
