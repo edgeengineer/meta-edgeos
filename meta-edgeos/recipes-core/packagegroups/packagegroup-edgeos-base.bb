@@ -16,6 +16,7 @@ RDEPENDS:${PN} = " \
     zstd \
     iproute2 \
     vim \
+    edgeos-motd \
     "
 
 RDEPENDS:${PN}:append = " \
