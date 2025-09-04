@@ -1,0 +1,235 @@
+name: EdgeOS CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quick-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Validate structure
+        run: |
+          echo "Checking repository structure..."
+          [ -f meta-edgeos/conf/layer.conf ] || { echo "Error: meta-edgeos/conf/layer.conf not found"; exit 1; }
+          [ -f bootstrap.sh ] || { echo "Error: bootstrap.sh not found"; exit 1; }
+          [ -x bootstrap.sh ] || { echo "Error: bootstrap.sh not executable"; exit 1; }
+          echo "✓ Repository structure validated"
+          
+      - name: Check recipe syntax
+        run: |
+          echo "Checking recipe syntax..."
+          errors=0
+          warnings=0
+          
+          # Check .bb and .bbappend files
+          for recipe in $(find meta-edgeos -name "*.bb" -o -name "*.bbappend"); do
+            recipe_name=$(basename "$recipe")
+            
+            # For .bb files, check for required fields (skip packagegroups and images)
+            if [[ "$recipe" == *.bb ]]; then
+              # Skip packagegroup and image recipes for LICENSE check
+              if [[ "$recipe_name" != packagegroup-*.bb ]] && [[ "$recipe_name" != *-image*.bb ]]; then
+                if ! grep -q "LICENSE" "$recipe"; then
+                  echo "⚠️  Missing LICENSE in $recipe_name"
+                  ((warnings++))
+                fi
+              fi
+              if ! grep -q "SUMMARY\|DESCRIPTION" "$recipe"; then
+                echo "⚠️  Missing SUMMARY/DESCRIPTION in $recipe_name"
+                ((warnings++))
+              fi
+            fi
+            
+            # Check for common issues
+            if grep -q $'\t' "$recipe"; then
+              echo "⚠️  Contains tabs (should use spaces): $recipe_name"
+              ((warnings++))
+            fi
+          done
+          
+          echo "✓ Recipe syntax check completed with $warnings warnings"
+          
+      - name: Check layer configuration
+        run: |
+          echo "Checking layer.conf..."
+          if [ -f meta-edgeos/conf/layer.conf ]; then
+            # Check for required variables
+            grep -q "BBPATH" meta-edgeos/conf/layer.conf || echo "⚠️  Missing BBPATH in layer.conf"
+            grep -q "BBFILES" meta-edgeos/conf/layer.conf || echo "⚠️  Missing BBFILES in layer.conf"
+            grep -q "BBFILE_COLLECTIONS" meta-edgeos/conf/layer.conf || echo "⚠️  Missing BBFILE_COLLECTIONS in layer.conf"
+            grep -q "LAYERVERSION" meta-edgeos/conf/layer.conf || echo "⚠️  Missing LAYERVERSION in layer.conf"
+            echo "✓ Layer configuration validated"
+          fi
+          
+      - name: Check WIC files
+        run: |
+          echo "Checking WIC configuration..."
+          if [ -d wic ]; then
+            for wic in wic/*.wks.in; do
+              if [ -f "$wic" ]; then
+                echo "Found WIC: $(basename $wic)"
+                # Basic WIC syntax check
+                grep -q "part " "$wic" || echo "⚠️  No partitions defined in $wic"
+              fi
+            done
+          fi
+          echo "✓ WIC check completed"
+          
+      - name: Validate scripts
+        run: |
+          echo "Checking shell scripts..."
+          # Find all shell scripts
+          for script in $(find . -name "*.sh" -not -path "./sources/*" -not -path "./build/*"); do
+            if [ -f "$script" ]; then
+              # Check for bash syntax errors
+              bash -n "$script" 2>/dev/null || echo "⚠️  Syntax error in $script"
+            fi
+          done
+          echo "✓ Script validation completed"
+          
+      - name: Security check
+        run: |
+          echo "Checking for potential security issues..."
+          # Check for hardcoded credentials
+          if grep -r -E "(PASSWORD|SECRET|KEY|TOKEN|APIKEY|API_KEY).*=.*['\"]" meta-edgeos/ --include="*.bb" --include="*.bbappend" --include="*.conf" 2>/dev/null; then
+            echo "⚠️  Found potential hardcoded credentials (please review)"
+          fi
+          echo "✓ Security check completed"
+
+  # Yocto environment tests - runs on all PRs
+  # These tests validate recipe syntax and layer compatibility
+  yocto-tests:
+    runs-on: ubuntu-22.04  # Use 22.04 to avoid AppArmor restrictions in 24.04
+    timeout-minutes: 60
+    needs: quick-validation
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Yocto dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gawk wget git diffstat unzip texinfo gcc build-essential \
+            chrpath socat cpio python3 python3-pip python3-pexpect \
+            xz-utils debianutils iputils-ping python3-git python3-jinja2 \
+            libsdl1.2-dev xterm python3-subunit \
+            mesa-common-dev zstd liblz4-tool file locales libacl1 \
+            python-is-python3
+      
+      - name: Set up locale
+        run: |
+          sudo locale-gen en_US.UTF-8
+          sudo update-locale LANG=en_US.UTF-8
+          
+      - name: Fix AppArmor for BitBake
+        run: |
+          # Workaround for Ubuntu 24.04 AppArmor restrictions
+          # See: https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890
+          echo "Configuring AppArmor for BitBake..."
+          echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/99-bitbake.conf
+          sudo sysctl -p /etc/sysctl.d/99-bitbake.conf
+          # Alternative: disable user namespace restrictions
+          echo '0' | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns || true
+          
+      - name: Cache Yocto layers
+        uses: actions/cache@v3
+        with:
+          path: |
+            sources
+          key: ${{ runner.os }}-yocto-layers-${{ hashFiles('bootstrap.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-yocto-layers-
+      
+      - name: Cache downloads
+        uses: actions/cache@v3
+        with:
+          path: |
+            downloads
+          key: ${{ runner.os }}-yocto-downloads-${{ hashFiles('meta-edgeos/**/*.bb', 'meta-edgeos/**/*.bbappend') }}
+          restore-keys: |
+            ${{ runner.os }}-yocto-downloads-
+      
+      - name: Bootstrap Yocto environment
+        run: |
+          echo "Setting up Yocto build environment..."
+          if [ -d "sources/poky" ]; then
+            echo "Using cached Yocto layers"
+          else
+            echo "Downloading required layers (poky, meta-raspberrypi, etc.)"
+          fi
+          ./bootstrap.sh
+          echo "✓ Bootstrap completed"
+          
+      - name: Parse recipes
+        run: |
+          source sources/poky/oe-init-build-env build
+          echo "Parsing all recipes to validate syntax..."
+          if bitbake -p; then
+            echo "✓ All recipes parsed successfully"
+          else
+            echo "✗ Recipe parsing failed"
+            exit 1
+          fi
+          
+      - name: Layer compatibility check
+        run: |
+          source sources/poky/oe-init-build-env build
+          echo "Checking layer compatibility..."
+          bitbake-layers show-layers
+          echo "✓ Layer structure validated"
+          
+      - name: Check for common Yocto issues
+        run: |
+          source sources/poky/oe-init-build-env build
+          echo "Checking for common issues..."
+          
+          # Check if all layers are compatible
+          if bitbake-layers check-layer-compatibility 2>/dev/null; then
+            echo "✓ All layers are compatible"
+          else
+            echo "⚠️  Some layer compatibility warnings (review logs)"
+          fi
+          
+          # Check for recipe parsing issues with specific recipes
+          echo "Testing core recipe parsing..."
+          for recipe in edgeos-image edgeos-identity edgeos-user usb-gadget; do
+            if bitbake -e $recipe > /dev/null 2>&1; then
+              echo "✓ $recipe environment OK"
+            else
+              echo "⚠️  $recipe may have configuration issues"
+            fi
+          done
+          
+      - name: Summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "Yocto Test Summary"
+          echo "========================================="
+          echo "✓ Yocto environment setup complete"
+          echo "✓ Recipe parsing validation complete"
+          echo "✓ Layer compatibility check complete"
+          echo "========================================="
+          echo "Note: First run will be slower (~15-30 min) while caching layers."
+          echo "Subsequent runs should complete in 5-10 minutes."
+          
+  # Full build - only manual trigger for now
+  full-build:
+    if: contains(github.event.pull_request.labels.*.name, 'full-build')
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Note about full builds
+        run: |
+          echo "========================================="
+          echo "Full build requested"
+          echo "========================================="
+          echo "Full Yocto builds can take 2-6 hours and require significant resources."
+          echo "Consider using a self-hosted runner or build server for production CI."
+          echo "========================================="

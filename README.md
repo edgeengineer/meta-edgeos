@@ -177,6 +177,12 @@ meta-edgeos/
 - 8GB+ RAM (16GB recommended for parallel builds)
 - Fast internet connection for initial downloads
 
+## CI/CD Status
+
+![CI Status](https://github.com/edgeengineer/meta-edgeos/actions/workflows/test.yml/badge.svg)
+
+EdgeOS uses GitHub Actions for continuous integration. See [CI Testing Documentation](docs/CI-TESTING.md) for details.
+
 ### Building EdgeOS
 
 1. **Clone and Bootstrap**:
