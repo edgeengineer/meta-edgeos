@@ -41,11 +41,17 @@ On first boot, the data partition automatically expands to use all available spa
 
 ### 1. Bootstrap with Mender Support
 
-The bootstrap script automatically includes meta-mender layers:
+Use the dedicated Mender bootstrap script to add the necessary layers:
 
 ```bash
-./bootstrap.sh
+./bootstrap-mender.sh
 ```
+
+This script:
+- Runs the standard bootstrap first
+- Downloads meta-mender layers
+- Configures bblayers.conf with Mender layers
+- Adds Mender configuration to local.conf
 
 ### 2. Build the Mender Image
 

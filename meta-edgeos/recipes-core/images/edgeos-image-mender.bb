@@ -20,4 +20,8 @@ WKS_FILE = "rpi-mender.wks"
 MENDER_ENABLE_PARTUUID = "1"
 
 # Generate fixed PARTUUIDs for consistent booting
-inherit partuuid
+inherit mender-partuuid
+
+# Enable Mender in distro for this image
+DISTRO_FEATURES:append = " mender-client-install"
+INHERIT += "mender-full"

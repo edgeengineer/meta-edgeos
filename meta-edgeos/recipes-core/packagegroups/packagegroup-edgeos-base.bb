@@ -18,7 +18,6 @@ RDEPENDS:${PN} = " \
     vim \
     edgeos-identity \
     edgeos-user \
-    mender-client \
     "
 
 RDEPENDS:${PN}:append = " \
