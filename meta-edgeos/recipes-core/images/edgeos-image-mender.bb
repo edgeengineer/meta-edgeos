@@ -3,8 +3,8 @@ require edgeos-image.bb
 
 DESCRIPTION = "EdgeOS image with Mender OTA update support"
 
-# Ensure Mender and expansion support is included
-IMAGE_INSTALL:append = " mender-client mender-artifact-info mender-expand"
+# Ensure Mender is included
+IMAGE_INSTALL:append = " mender-client mender-artifact-info"
 
 # Enable Mender features for the image
 MENDER_FEATURES_ENABLE:append = " mender-image mender-client-install mender-partuuid"

@@ -4,6 +4,9 @@ inherit journal-persist
 # make sure the systemd recipe builds the networkd subpackage
 PACKAGECONFIG:append = " networkd"
 
+# Enable firstboot and growfs support for automatic partition expansion
+PACKAGECONFIG:append = " firstboot"
+
 # systemd persistent log
 # Install the drop-in and tmpfiles rule ONLY when this feature is enabled.
 do_install:append:journal_persist-on() {
@@ -28,4 +31,17 @@ EOF
 FILES:${PN}:append:journal_persist-on = " \
     ${sysconfdir}/systemd/journald.conf.d/10-persistent.conf \
     ${libdir}/tmpfiles.d/50-journald-persistent.conf \
+    "
+
+# Enable automatic filesystem expansion on first boot
+# This uses systemd's built-in growfs service
+do_install:append() {
+    # Enable growfs-root service for automatic root partition expansion
+    install -d ${D}${sysconfdir}/systemd/system/sysinit.target.wants
+    ln -sf ${systemd_system_unitdir}/systemd-growfs-root.service \
+           ${D}${sysconfdir}/systemd/system/sysinit.target.wants/systemd-growfs-root.service
+}
+
+FILES:${PN}:append = " \
+    ${sysconfdir}/systemd/system/sysinit.target.wants/systemd-growfs-root.service \
     "
