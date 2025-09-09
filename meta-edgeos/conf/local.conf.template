@@ -52,3 +52,39 @@ EXTRA_IMAGE_FEATURES:append = " debug-tweaks"
 # Uncomment for production builds:
 # EXTRA_IMAGE_FEATURES:remove = "debug-tweaks"
 # EDGEOS_DEBUG = "0"
+
+# Mender OTA Update Configuration
+# ================================
+# Enable Mender client in standalone mode (no server connection)
+MENDER_FEATURES_ENABLE:append = " mender-client-install"
+MENDER_FEATURES_DISABLE:append = " mender-grub mender-image-uefi"
+
+# Use standalone mode by default (no Mender server required)
+MENDER_SERVER_URL = ""
+
+# Storage device configuration for Raspberry Pi
+MENDER_STORAGE_DEVICE = "/dev/mmcblk0"
+MENDER_STORAGE_TOTAL_SIZE_MB = "8192"
+MENDER_BOOT_PART_SIZE_MB = "256"
+MENDER_DATA_PART_SIZE_MB = "128"
+MENDER_STORAGE_RESERVED_RAW_SPACE = "0"
+
+# Partition layout for A/B updates
+# Boot: /dev/mmcblk0p1 (256MB)
+# RootFS A: /dev/mmcblk0p2 
+# RootFS B: /dev/mmcblk0p3
+# Data: /dev/mmcblk0p4 (128MB)
+MENDER_BOOT_PART = "/dev/mmcblk0p1"
+MENDER_ROOTFS_PART_A = "/dev/mmcblk0p2"
+MENDER_ROOTFS_PART_B = "/dev/mmcblk0p3"
+MENDER_DATA_PART = "/dev/mmcblk0p4"
+
+# Artifact configuration
+MENDER_ARTIFACT_NAME = "edgeos-${DATETIME}"
+
+# Enable Mender systemd integration
+DISTRO_FEATURES:append = " systemd"
+
+# Optional: Enable Mender add-ons (uncomment as needed)
+# MENDER_CONNECT_ENABLE = "1"  # Remote shell access
+# MENDER_CONFIGURE_ENABLE = "1"  # Configuration management

@@ -1,0 +1,22 @@
+# WIC kickstart file for Raspberry Pi with Mender A/B partitions
+#
+# Partition layout:
+# - Boot partition: 256MB FAT32 for bootloader and kernel
+# - RootFS A: First root filesystem
+# - RootFS B: Second root filesystem (same size as A)
+# - Data partition: 128MB for persistent data
+
+# Boot partition
+part /boot --source bootimg-partition --ondisk mmcblk0 --fstype=vfat --label boot --active --align 4096 --size 256
+
+# Root filesystem A
+part / --source rootfs --ondisk mmcblk0 --fstype=ext4 --label rootfs-a --align 4096 --fixed-size ${MENDER_CALC_ROOTFS_SIZE}
+
+# Root filesystem B (empty initially, will be populated by Mender)
+part --ondisk mmcblk0 --fstype=ext4 --label rootfs-b --align 4096 --fixed-size ${MENDER_CALC_ROOTFS_SIZE}
+
+# Data partition for Mender persistent data
+part /data --ondisk mmcblk0 --fstype=ext4 --label data --align 4096 --size 128
+
+# Use GPT partition table
+bootloader --ptable gpt

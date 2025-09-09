@@ -57,7 +57,11 @@ BBLAYERS ?= " \
   ${TOPDIR}/../sources/poky/meta \
   ${TOPDIR}/../sources/poky/meta-poky \
   ${TOPDIR}/../sources/meta-openembedded/meta-oe \
+  ${TOPDIR}/../sources/meta-openembedded/meta-python \
+  ${TOPDIR}/../sources/meta-openembedded/meta-networking \
   ${TOPDIR}/../sources/meta-raspberrypi \
+  ${TOPDIR}/../sources/meta-mender/meta-mender-core \
+  ${TOPDIR}/../sources/meta-mender/meta-mender-raspberrypi \
   ${TOPDIR}/../meta-edgeos \
   "
 EOF

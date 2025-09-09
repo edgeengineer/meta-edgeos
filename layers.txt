@@ -1,3 +1,4 @@
 poky git://git.yoctoproject.org/poky scarthgap
 meta-raspberrypi git://git.yoctoproject.org/meta-raspberrypi scarthgap
 meta-openembedded https://git.openembedded.org/meta-openembedded scarthgap
+meta-mender https://github.com/mendersoftware/meta-mender scarthgap
