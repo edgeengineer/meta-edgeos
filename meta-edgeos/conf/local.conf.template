@@ -62,22 +62,36 @@ MENDER_FEATURES_DISABLE:append = " mender-grub mender-image-uefi"
 # Use standalone mode by default (no Mender server required)
 MENDER_SERVER_URL = ""
 
-# Storage device configuration for Raspberry Pi
-MENDER_STORAGE_DEVICE = "/dev/mmcblk0"
-MENDER_STORAGE_TOTAL_SIZE_MB = "8192"
+# Storage device configuration - auto-detect at runtime
+# Supports both SD card (mmcblk0) and NVMe (nvme0n1)
+MENDER_STORAGE_DEVICE = "/dev/disk/by-path/platform-*"
+MENDER_STORAGE_DEVICE_BASE = "/dev/disk/by-path/platform-*"
+
+# Dynamic storage sizing - uses percentage of available space
+# Set to 0 to use all available space (auto-expand on first boot)
+MENDER_STORAGE_TOTAL_SIZE_MB = "0"
 MENDER_BOOT_PART_SIZE_MB = "256"
-MENDER_DATA_PART_SIZE_MB = "128"
+MENDER_DATA_PART_SIZE_MB = "256"
 MENDER_STORAGE_RESERVED_RAW_SPACE = "0"
 
-# Partition layout for A/B updates
-# Boot: /dev/mmcblk0p1 (256MB)
-# RootFS A: /dev/mmcblk0p2 
-# RootFS B: /dev/mmcblk0p3
-# Data: /dev/mmcblk0p4 (128MB)
-MENDER_BOOT_PART = "/dev/mmcblk0p1"
-MENDER_ROOTFS_PART_A = "/dev/mmcblk0p2"
-MENDER_ROOTFS_PART_B = "/dev/mmcblk0p3"
-MENDER_DATA_PART = "/dev/mmcblk0p4"
+# Use PARTUUID for partition identification (storage-agnostic)
+MENDER_ENABLE_PARTUUID = "1"
+MENDER_BOOT_PART_FSTYPE = "vfat"
+MENDER_DATA_PART_FSTYPE = "ext4"
+
+# Partition layout for A/B updates (using PARTUUID)
+# Boot: PARTUUID set by WKS
+# RootFS A: PARTUUID set by WKS
+# RootFS B: PARTUUID set by WKS  
+# Data: PARTUUID set by WKS
+# These will be resolved at runtime using PARTUUID
+MENDER_BOOT_PART = "PARTUUID=${MENDER_BOOT_PARTUUID}"
+MENDER_ROOTFS_PART_A = "PARTUUID=${MENDER_ROOTFS_A_PARTUUID}"
+MENDER_ROOTFS_PART_B = "PARTUUID=${MENDER_ROOTFS_B_PARTUUID}"
+MENDER_DATA_PART = "PARTUUID=${MENDER_DATA_PARTUUID}"
+
+# Enable auto-expansion of root filesystem on first boot
+MENDER_FEATURES_ENABLE:append = " mender-growfs-data"
 
 # Artifact configuration
 MENDER_ARTIFACT_NAME = "edgeos-${DATETIME}"

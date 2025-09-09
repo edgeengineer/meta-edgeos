@@ -12,14 +12,30 @@ EdgeOS includes support for Mender OTA (Over-The-Air) updates in standalone mode
 
 ## Partition Layout
 
-The Mender-enabled EdgeOS image uses the following partition scheme:
+The Mender-enabled EdgeOS image uses a flexible partition scheme with PARTUUID support:
 
-| Partition | Device | Size | Purpose |
-|-----------|--------|------|---------|
-| Boot | /dev/mmcblk0p1 | 256MB | Bootloader, kernel, device tree |
-| RootFS A | /dev/mmcblk0p2 | ~3.5GB | Primary root filesystem |
-| RootFS B | /dev/mmcblk0p3 | ~3.5GB | Secondary root filesystem |
-| Data | /dev/mmcblk0p4 | 128MB | Persistent data across updates |
+| Partition | PARTUUID | Initial Size | Purpose |
+|-----------|----------|--------------|---------|
+| Boot | Fixed UUID | 256MB | Bootloader, kernel, device tree |
+| RootFS A | Fixed UUID | ~3.5GB | Primary root filesystem |
+| RootFS B | Fixed UUID | ~3.5GB | Secondary root filesystem |
+| Data | Fixed UUID | 256MB | Persistent data (auto-expands) |
+
+### Storage Device Support
+
+EdgeOS with Mender supports multiple storage types:
+- **SD Cards** (`/dev/mmcblk0`)
+- **NVMe SSDs** (`/dev/nvme0n1`)
+- **USB drives** (`/dev/sd*`)
+
+The system uses PARTUUID for partition identification, making it storage-agnostic.
+
+### Automatic Expansion
+
+On first boot, the data partition automatically expands to use all available space on storage devices larger than 8GB. This allows the same image to work optimally on:
+- 8GB SD cards (minimum)
+- 32GB SD cards
+- 256GB+ NVMe SSDs
 
 ## Building Mender-Enabled Image
 

@@ -1,22 +1,30 @@
-# WIC kickstart file for Raspberry Pi with Mender A/B partitions
+# WIC kickstart file for EdgeOS with Mender A/B partitions and PARTUUID support
 #
 # Partition layout:
 # - Boot partition: 256MB FAT32 for bootloader and kernel
-# - RootFS A: First root filesystem
-# - RootFS B: Second root filesystem (same size as A)
-# - Data partition: 128MB for persistent data
+# - RootFS A: First root filesystem (expandable)
+# - RootFS B: Second root filesystem (same initial size as A)
+# - Data partition: Persistent data (expandable)
+#
+# Uses PARTUUID for storage-agnostic booting (SD card or NVMe)
 
-# Boot partition
-part /boot --source bootimg-partition --ondisk mmcblk0 --fstype=vfat --label boot --active --align 4096 --size 256
+# Include PARTUUID generation
+inherit partuuid
 
-# Root filesystem A
-part / --source rootfs --ondisk mmcblk0 --fstype=ext4 --label rootfs-a --align 4096 --fixed-size ${MENDER_CALC_ROOTFS_SIZE}
+# Boot partition with fixed PARTUUID
+part /boot --source bootimg-partition --ondisk sda --fstype=vfat --label boot --active --align 4096 --size 256 --uuid ${EDGE_BOOT_PARTUUID}
 
-# Root filesystem B (empty initially, will be populated by Mender)
-part --ondisk mmcblk0 --fstype=ext4 --label rootfs-b --align 4096 --fixed-size ${MENDER_CALC_ROOTFS_SIZE}
+# Root filesystem A with PARTUUID (initial size, can be expanded)
+part / --source rootfs --ondisk sda --fstype=ext4 --label rootfs-a --align 4096 --size 3500 --uuid ${EDGE_ROOTFS_A_PARTUUID}
 
-# Data partition for Mender persistent data
-part /data --ondisk mmcblk0 --fstype=ext4 --label data --align 4096 --size 128
+# Root filesystem B with PARTUUID (matches A's initial size)
+part --ondisk sda --fstype=ext4 --label rootfs-b --align 4096 --size 3500 --uuid ${EDGE_ROOTFS_B_PARTUUID}
 
-# Use GPT partition table
+# Data partition for Mender persistent data (initial size, expandable)
+part /data --ondisk sda --fstype=ext4 --label data --align 4096 --size 256 --uuid ${EDGE_DATA_PARTUUID}
+
+# Use GPT partition table for PARTUUID support
 bootloader --ptable gpt
+
+# Note: --ondisk sda is generic, actual device determined at runtime
+# Partitions will auto-expand on first boot if configured
