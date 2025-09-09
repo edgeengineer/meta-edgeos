@@ -17,6 +17,8 @@ RDEPENDS:${PN} = " \
     iproute2 \
     vim \
     edgeos-motd \
+    edgeos-identity \
+    edgeos-user \
     "
 
 RDEPENDS:${PN}:append = " \
