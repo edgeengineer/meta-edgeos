@@ -1,0 +1,64 @@
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+
+SRC_URI += "file://generate-hostname.sh \
+            file://edgeos-mdns.service \
+            file://edgeos-hostname.service \
+            file://nsswitch.conf.append"
+
+inherit systemd
+
+SYSTEMD_SERVICE:${PN} += "edgeos-hostname.service"
+SYSTEMD_AUTO_ENABLE:${PN} = "enable"
+
+do_install:append() {
+    # Install hostname generation script to /usr/sbin
+    install -d ${D}${sbindir}
+    install -m 0755 ${WORKDIR}/generate-hostname.sh ${D}${sbindir}/
+    
+    # Install Avahi service file
+    install -d ${D}${sysconfdir}/avahi/services
+    install -m 0644 ${WORKDIR}/edgeos-mdns.service ${D}${sysconfdir}/avahi/services/
+    
+    # Install systemd service for hostname setup
+    install -d ${D}${systemd_system_unitdir}
+    install -m 0644 ${WORKDIR}/edgeos-hostname.service ${D}${systemd_system_unitdir}/
+    
+    # Ensure NSS mDNS is properly configured
+    if [ -f ${D}${sysconfdir}/nsswitch.conf ]; then
+        # Check if mdns is already configured
+        if ! grep -q "mdns" ${D}${sysconfdir}/nsswitch.conf; then
+            # Replace the hosts line with our configuration
+            sed -i '/^hosts:/d' ${D}${sysconfdir}/nsswitch.conf
+            cat ${WORKDIR}/nsswitch.conf.append >> ${D}${sysconfdir}/nsswitch.conf
+        fi
+    fi
+    
+    # Enable Avahi daemon and ensure it starts with proper settings
+    if [ -f ${D}${sysconfdir}/avahi/avahi-daemon.conf ]; then
+        # Enable mDNS reflector for better discovery
+        sed -i 's/^#*enable-reflector=.*/enable-reflector=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+        
+        # Set proper hostname behavior
+        sed -i 's/^#*use-ipv4=.*/use-ipv4=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+        sed -i 's/^#*use-ipv6=.*/use-ipv6=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+        
+        # Enable publishing
+        sed -i 's/^#*publish-addresses=.*/publish-addresses=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+        sed -i 's/^#*publish-hinfo=.*/publish-hinfo=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+        sed -i 's/^#*publish-workstation=.*/publish-workstation=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+        sed -i 's/^#*publish-domain=.*/publish-domain=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+        
+        # Set host name
+        sed -i 's/^#*host-name=.*/# host-name is set dynamically by edgeos-hostname.service/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+    fi
+}
+
+FILES:${PN} += "${sbindir}/generate-hostname.sh \
+                ${sysconfdir}/avahi/services/edgeos-mdns.service \
+                ${systemd_system_unitdir}/edgeos-hostname.service"
+
+# Ensure avahi-daemon is enabled
+SYSTEMD_SERVICE:${PN} = "avahi-daemon.service edgeos-hostname.service"
+
+# Add runtime dependencies
+RDEPENDS:${PN} += "bash"

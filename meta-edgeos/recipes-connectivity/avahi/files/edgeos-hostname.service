@@ -1,0 +1,14 @@
+[Unit]
+Description=EdgeOS Hostname Setup
+Before=avahi-daemon.service network.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/generate-hostname.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
