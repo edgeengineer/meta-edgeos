@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Colors
 BLUE='\033[0;34m'
@@ -20,15 +20,15 @@ cat << "EOF"
     +++++++++++++++  ++++++++++++++            ++++++++++++++        ++++++++++++++ 
 EOF
 
-echo "${GREEN}Welcome to EdgeOS${NC}"
-echo "${BLUE}Secure Edge Computing Platform${NC}"
+echo -e "${GREEN}Welcome to EdgeOS${NC}"
+echo -e "${BLUE}Secure Edge Computing Platform${NC}"
 echo
 echo "System Information:"
 echo "* $(uname -sr)"
 echo
-echo "${YELLOW}System:${NC} $(uname -srm)"
+echo -e "${YELLOW}System:${NC} $(uname -srm)"
 if [ -f /etc/edgeos-build-id ]; then
-    echo "${YELLOW}Build ID:${NC} $(cat /etc/edgeos-build-id)"
+    echo -e "${YELLOW}Build ID:${NC} $(cat /etc/edgeos-build-id)"
 fi
-echo "${YELLOW}Hostname:${NC} $(hostname -f 2>/dev/null || hostname)"
+echo -e "${YELLOW}Hostname:${NC} $(hostname -f 2>/dev/null || hostname)"
 echo

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # System resource information
 
@@ -30,7 +30,7 @@ else
     MEM_COLOR="${GREEN}"
 fi
 
-echo "  Memory: ${MEM_COLOR}${MEM_USED}${NC}/${MEM_TOTAL} (${MEM_COLOR}${MEM_PERCENT}%${NC} used)"
+echo -e "  Memory: ${MEM_COLOR}${MEM_USED}${NC}/${MEM_TOTAL} (${MEM_COLOR}${MEM_PERCENT}%${NC} used)"
 
 # Disk information
 DISK_USAGE=$(df -h / | tail -1 | awk '{print $3"/"$2" ("$5" used)"}')
@@ -44,7 +44,7 @@ else
     DISK_COLOR="${GREEN}"
 fi
 
-echo "  Disk: ${DISK_COLOR}${DISK_USAGE}${NC}"
+echo -e "  Disk: ${DISK_COLOR}${DISK_USAGE}${NC}"
 
 # Network information
 PRIMARY_IP=$(ip -4 addr show scope global | grep inet | head -1 | awk '{print $2}' | cut -d/ -f1)

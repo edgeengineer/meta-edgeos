@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # EdgeOS services status
 
@@ -16,9 +16,9 @@ check_service() {
     DISPLAY_NAME=$2
     
     if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
-        echo "  ${DISPLAY_NAME}: ${GREEN}● running${NC}"
+        echo -e "  ${DISPLAY_NAME}: ${GREEN}● running${NC}"
     elif systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
-        echo "  ${DISPLAY_NAME}: ${YELLOW}○ enabled (not running)${NC}"
+        echo -e "  ${DISPLAY_NAME}: ${YELLOW}○ enabled (not running)${NC}"
     else
         # Service might not exist, don't show it
         return
