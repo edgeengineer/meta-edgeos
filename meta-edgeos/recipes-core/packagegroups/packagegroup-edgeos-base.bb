@@ -19,6 +19,7 @@ RDEPENDS:${PN} = " \
     edgeos-motd \
     edgeos-identity \
     edgeos-user \
+    edge-agent \
     "
 
 RDEPENDS:${PN}:append = " \
