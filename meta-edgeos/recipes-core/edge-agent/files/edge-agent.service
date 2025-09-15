@@ -1,0 +1,32 @@
+[Unit]
+Description=EdgeOS Agent
+Documentation=https://github.com/edgeengineer/edge-agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sh -c 'if [ ! -f /usr/local/bin/edge-agent ] || grep -q "Edge-agent not yet installed" /usr/local/bin/edge-agent 2>/dev/null; then /opt/edgeos/bin/download-edge-agent.sh; fi'
+ExecStart=/usr/local/bin/edge-agent daemon
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=edge-agent
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/edge-agent /var/log
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Environment
+EnvironmentFile=-/etc/default/edge-agent
+
+[Install]
+WantedBy=multi-user.target

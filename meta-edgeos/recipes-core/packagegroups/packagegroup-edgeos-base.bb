@@ -22,6 +22,7 @@ RDEPENDS:${PN} = " \
     avahi-daemon \
     avahi-utils \
     libnss-mdns \
+    edge-agent \
     "
 
 RDEPENDS:${PN}:append = " \
