@@ -19,6 +19,9 @@ RDEPENDS:${PN} = " \
     edgeos-motd \
     edgeos-identity \
     edgeos-user \
+    avahi-daemon \
+    avahi-utils \
+    libnss-mdns \
     edge-agent \
     "
 
