@@ -132,6 +132,7 @@ do_install() {
     install -d ${D}/usr/local/bin
     install -d ${D}/opt/edgeos/bin
     install -d ${D}${systemd_system_unitdir}
+    install -d ${D}/var/lib/edge-agent
     
     # Install the download script
     install -m 0755 ${WORKDIR}/download-edge-agent.sh ${D}/opt/edgeos/bin/
@@ -179,7 +180,8 @@ EOF
 FILES:${PN} = "/usr/local/bin/* \
                /opt/edgeos/bin/* \
                ${systemd_system_unitdir}/* \
-               ${sysconfdir}/default/edge-agent"
+               ${sysconfdir}/default/edge-agent \
+               /var/lib/edge-agent"
 
 RDEPENDS:${PN} = "bash curl tar gzip jq"
 
