@@ -7,6 +7,7 @@ inherit systemd
 
 SRC_URI = " \
     file://generate-uuid.sh \
+    file://update-mdns-uuid.sh \
     file://edgeos-identity.service \
     "
 
@@ -16,9 +17,10 @@ SYSTEMD_SERVICE:${PN} = "edgeos-identity.service"
 SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 do_install() {
-    # Install UUID generation script
+    # Install UUID generation scripts
     install -d ${D}${bindir}
     install -m 0755 ${WORKDIR}/generate-uuid.sh ${D}${bindir}/
+    install -m 0755 ${WORKDIR}/update-mdns-uuid.sh ${D}${bindir}/
 
     # Install systemd service
     install -d ${D}${systemd_system_unitdir}
@@ -29,7 +31,8 @@ do_install() {
 }
 
 FILES:${PN} += "${bindir}/generate-uuid.sh"
+FILES:${PN} += "${bindir}/update-mdns-uuid.sh"
 FILES:${PN} += "${systemd_system_unitdir}/edgeos-identity.service"
 FILES:${PN} += "${sysconfdir}/edgeos"
 
-RDEPENDS:${PN} = "bash util-linux-uuidgen"
+RDEPENDS:${PN} = "bash util-linux-uuidgen avahi-daemon"

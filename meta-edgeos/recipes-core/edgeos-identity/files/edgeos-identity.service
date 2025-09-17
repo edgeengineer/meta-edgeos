@@ -1,13 +1,13 @@
 [Unit]
-Description=EdgeOS Device Identity Setup
+Description=EdgeOS Device Identity and mDNS Setup
 DefaultDependencies=no
-Before=sysinit.target
+Before=avahi-daemon.service
 After=local-fs.target
-ConditionPathExists=!/etc/edgeos/device-uuid
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/generate-uuid.sh
+ExecStart=/usr/bin/update-mdns-uuid.sh
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
