@@ -14,7 +14,7 @@ fi
 # Default values if not configured
 GITHUB_REPO="${EDGE_AGENT_GITHUB_REPO:-edgeengineer/edge-agent}"
 VERSION="${EDGE_AGENT_VERSION:-latest}"
-ARCH="${EDGE_AGENT_ARCH:-arm64}"
+ARCH="aarch64"  # Hardcoded for RPi
 
 # Paths
 INSTALL_DIR="/usr/local/bin"
@@ -61,94 +61,77 @@ check_requirements() {
     fi
 }
 
-# Get release information from GitHub
+# Get release information from GitHub - simplified version
 get_release_info() {
-    local api_url
-    
-    if [ "${VERSION}" = "latest" ]; then
-        api_url="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
+    local api_url="https://api.github.com/repos/${GITHUB_REPO}/releases"
+
+    log "Fetching releases from GitHub..." >&2
+
+    # Use wget if available, otherwise curl
+    local releases_json
+    if command -v wget >/dev/null 2>&1; then
+        releases_json=$(wget -q -O - "${api_url}" 2>/dev/null) || error "Failed to fetch releases"
     else
-        api_url="https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${VERSION}"
+        releases_json=$(curl -sL "${api_url}" 2>/dev/null) || error "Failed to fetch releases"
     fi
-    
-    log "Fetching release information from: ${api_url}"
-    
-    local release_info
-    release_info=$(curl -sL "${api_url}" 2>/dev/null) || error "Failed to fetch release information"
-    
-    if echo "${release_info}" | grep -q '"message".*"Not Found"'; then
-        error "Release ${VERSION} not found"
+
+    # Return the first release (latest pre-release or release)
+    if command -v jq >/dev/null 2>&1; then
+        echo "${releases_json}" | jq '.[0]' 2>/dev/null
+    else
+        # If jq is not available, return the raw JSON (first release)
+        echo "${releases_json}"
     fi
-    
-    echo "${release_info}"
 }
 
-# Download the binary
+# Download the binary - simplified version
 download_binary() {
     local release_info="$1"
-    
+
     # Create temp directory
     mkdir -p "${TEMP_DIR}"
-    
-    # Look for the appropriate binary URL
+
+    # Extract download URL for aarch64 binary
     local download_url
-    download_url=$(echo "${release_info}" | jq -r '.assets[] | select(.name | contains("linux")) | select(.name | contains("'${ARCH}'")) | .browser_download_url' | head -1)
-    
-    if [ -z "${download_url}" ] || [ "${download_url}" = "null" ]; then
-        # Try alternative naming patterns
-        download_url=$(echo "${release_info}" | jq -r '.assets[] | select(.name | contains("edge-agent")) | select(.name | contains("'${ARCH}'")) | .browser_download_url' | head -1)
+
+    if command -v jq >/dev/null 2>&1; then
+        # Use jq if available - specifically look for edge-agent (not edge-cli)
+        download_url=$(echo "${release_info}" | jq -r '.assets[]? | select(.name | contains("edge-agent-linux-static-musl-aarch64")) | .browser_download_url' 2>/dev/null | head -1)
+    else
+        # Fallback to grep - look for the URL pattern
+        download_url=$(echo "${release_info}" | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*edge-agent-linux-static-musl-aarch64[^"]*"' | head -1 | cut -d'"' -f4)
     fi
-    
+
     if [ -z "${download_url}" ] || [ "${download_url}" = "null" ]; then
         error "No suitable binary found for architecture: ${ARCH}"
     fi
-    
-    local filename=$(basename "${download_url}")
+
+    local filename="edge-agent.tar.gz"
     log "Downloading: ${download_url}"
-    
-    curl -L -o "${TEMP_DIR}/${filename}" "${download_url}" || error "Download failed"
-    
-    # Extract if needed
-    if [[ "${filename}" == *.tar.gz ]]; then
-        log "Extracting tar.gz archive"
-        tar -xzf "${TEMP_DIR}/${filename}" -C "${TEMP_DIR}"
-        
-        # Find the binary
-        local binary_path
-        binary_path=$(find "${TEMP_DIR}" -name "edge-agent" -type f | head -1)
-        
-        if [ -z "${binary_path}" ]; then
-            error "Binary not found in archive"
-        fi
-        
-        mv "${binary_path}" "${TEMP_DIR}/${BINARY_NAME}"
-    elif [[ "${filename}" == *.zip ]]; then
-        log "Extracting zip archive"
-        unzip -q "${TEMP_DIR}/${filename}" -d "${TEMP_DIR}"
-        
-        # Find the binary
-        local binary_path
-        binary_path=$(find "${TEMP_DIR}" -name "edge-agent" -type f | head -1)
-        
-        if [ -z "${binary_path}" ]; then
-            error "Binary not found in archive"
-        fi
-        
-        mv "${binary_path}" "${TEMP_DIR}/${BINARY_NAME}"
+
+    # Use wget if available, otherwise curl
+    if command -v wget >/dev/null 2>&1; then
+        wget -O "${TEMP_DIR}/${filename}" "${download_url}" || error "Download failed"
     else
-        # Assume it's the binary itself
-        mv "${TEMP_DIR}/${filename}" "${TEMP_DIR}/${BINARY_NAME}"
+        curl -L -o "${TEMP_DIR}/${filename}" "${download_url}" || error "Download failed"
     fi
-    
-    # Make executable
+
+    # Extract the archive
+    log "Extracting archive"
+    tar -xzf "${TEMP_DIR}/${filename}" -C "${TEMP_DIR}"
+
+    # Find the binary (exclude edge-cli)
+    local binary_path
+    binary_path=$(find "${TEMP_DIR}" -name "edge-agent" -type f ! -path "*/edge-cli*" | head -1)
+
+    if [ -z "${binary_path}" ]; then
+        error "Binary not found in archive"
+    fi
+
+    mv "${binary_path}" "${TEMP_DIR}/${BINARY_NAME}"
     chmod +x "${TEMP_DIR}/${BINARY_NAME}"
-    
-    # Verify it's a valid binary
-    if ! file "${TEMP_DIR}/${BINARY_NAME}" | grep -q "executable"; then
-        error "Downloaded file is not a valid executable"
-    fi
-    
-    log "Binary downloaded and verified successfully"
+
+    log "Binary downloaded and prepared successfully"
 }
 
 # Install the binary
@@ -192,7 +175,7 @@ main() {
     
     local release_info
     release_info=$(get_release_info)
-    
+
     download_binary "${release_info}"
     install_binary
     

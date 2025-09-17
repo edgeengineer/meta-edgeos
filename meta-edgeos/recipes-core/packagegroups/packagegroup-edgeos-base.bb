@@ -16,6 +16,9 @@ RDEPENDS:${PN} = " \
     zstd \
     iproute2 \
     vim \
+    ncurses \
+    ncurses-terminfo \
+    ncurses-terminfo-base \
     edgeos-motd \
     edgeos-identity \
     edgeos-user \

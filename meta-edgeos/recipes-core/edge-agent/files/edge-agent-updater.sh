@@ -14,7 +14,7 @@ fi
 # Default values if not configured
 GITHUB_REPO="${EDGE_AGENT_GITHUB_REPO:-edgeengineer/edge-agent}"
 VERSION="${EDGE_AGENT_VERSION:-latest}"
-ARCH="${EDGE_AGENT_ARCH:-arm64}"
+ARCH="aarch64"  # Hardcoded for RPi
 
 # Paths
 INSTALL_DIR="/usr/local/bin"
@@ -63,24 +63,29 @@ get_current_version() {
     echo "${current_version}"
 }
 
-# Get latest version from GitHub
+# Get latest version from GitHub - simplified to always get first release
 get_latest_version() {
-    local api_url="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
-    
+    local api_url="https://api.github.com/repos/${GITHUB_REPO}/releases"
+
+    # Get the most recent release/pre-release
     local release_info
-    release_info=$(curl -sL "${api_url}" 2>/dev/null) || return 1
-    
-    if echo "${release_info}" | grep -q '"message".*"Not Found"'; then
-        return 1
+    if command -v wget >/dev/null 2>&1; then
+        release_info=$(wget -q -O - "${api_url}" 2>/dev/null) || return 1
+    else
+        release_info=$(curl -sL "${api_url}" 2>/dev/null) || return 1
     fi
-    
-    # Extract version from tag_name
+
+    # Extract version from the first release
     local latest_version
-    latest_version=$(echo "${release_info}" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
-    
+    if command -v jq >/dev/null 2>&1; then
+        latest_version=$(echo "${release_info}" | jq -r '.[0].tag_name // empty')
+    else
+        latest_version=$(echo "${release_info}" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | cut -d'"' -f4)
+    fi
+
     # Remove 'v' prefix if present
     latest_version="${latest_version#v}"
-    
+
     echo "${latest_version}"
 }
 
