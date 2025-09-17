@@ -5,6 +5,12 @@ SRC_URI += "file://generate-hostname.sh \
             file://edgeos-hostname.service \
             file://nsswitch.conf.append"
 
+# Ensure D-Bus support is enabled for proper service publishing
+PACKAGECONFIG += "dbus"
+
+# Ensure Avahi compiles with static service file support
+EXTRA_OECONF += "--with-avahi-user=avahi --with-avahi-group=avahi"
+
 inherit systemd
 
 SYSTEMD_SERVICE:${PN} += "edgeos-hostname.service"
@@ -35,19 +41,22 @@ do_install:append() {
     
     # Enable Avahi daemon and ensure it starts with proper settings
     if [ -f ${D}${sysconfdir}/avahi/avahi-daemon.conf ]; then
+        # Enable D-Bus support for proper service publishing
+        sed -i 's/^#*enable-dbus=.*/enable-dbus=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
+
         # Enable mDNS reflector for better discovery
         sed -i 's/^#*enable-reflector=.*/enable-reflector=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
-        
+
         # Set proper hostname behavior
         sed -i 's/^#*use-ipv4=.*/use-ipv4=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
         sed -i 's/^#*use-ipv6=.*/use-ipv6=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
-        
+
         # Enable publishing
         sed -i 's/^#*publish-addresses=.*/publish-addresses=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
         sed -i 's/^#*publish-hinfo=.*/publish-hinfo=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
         sed -i 's/^#*publish-workstation=.*/publish-workstation=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
         sed -i 's/^#*publish-domain=.*/publish-domain=yes/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
-        
+
         # Set host name
         sed -i 's/^#*host-name=.*/# host-name is set dynamically by edgeos-hostname.service/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
     fi

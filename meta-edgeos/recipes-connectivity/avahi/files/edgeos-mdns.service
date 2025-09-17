@@ -42,4 +42,11 @@
     <txt-record>version=1.0</txt-record>
     <txt-record>api=/api/v1</txt-record>
   </service>
+
+  <!-- EdgeOS Device Service -->
+  <service>
+    <type>_edgeos._udp</type>
+    <port>50051</port>
+    <txt-record>edgeosdevice=SOME_DEVICE_ID</txt-record>
+  </service>
 </service-group>
