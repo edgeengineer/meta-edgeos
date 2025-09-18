@@ -1,8 +1,8 @@
 [Unit]
 Description=EdgeOS Agent
 Documentation=https://github.com/edgeengineer/edge-agent
-After=network-online.target
-Wants=network-online.target
+After=network.target
+Wants=network.target
 
 [Service]
 Type=simple
