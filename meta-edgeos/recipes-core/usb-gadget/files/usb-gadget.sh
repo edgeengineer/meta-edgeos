@@ -78,9 +78,21 @@ prepare() {
 
     # --- NCM function ---
     mkdir -p "$G/functions/$FUNC_NCM"
-    # Locally administered MACs (02:…)
-    echo "02:12:34:56:78:ca" > "$G/functions/$FUNC_NCM/dev_addr"
-    echo "02:12:34:56:78:cb" > "$G/functions/$FUNC_NCM/host_addr"
+
+    # Generate dynamic MAC addresses based on device serial
+    if [ -x /usr/libexec/edgeos-generate-mac ]; then
+        DEV_MAC=$(/usr/libexec/edgeos-generate-mac usb-dev)
+        HOST_MAC=$(/usr/libexec/edgeos-generate-mac usb-host)
+        log "Using generated MACs: dev=$DEV_MAC host=$HOST_MAC"
+    else
+        # Fallback to static MACs if generator not available
+        DEV_MAC="02:12:34:56:78:ca"
+        HOST_MAC="02:12:34:56:78:cb"
+        log "Warning: MAC generator not found, using static MACs"
+    fi
+
+    echo "$DEV_MAC" > "$G/functions/$FUNC_NCM/dev_addr"
+    echo "$HOST_MAC" > "$G/functions/$FUNC_NCM/host_addr"
     # Optional tuning:
     # echo 5 > "$G/functions/$FUNC_NCM/qmult"
 
