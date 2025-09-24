@@ -7,6 +7,12 @@ Name=usb0
 Address=192.168.7.1/24
 DHCPServer=yes
 ConfigureWithoutCarrier=yes
+# Enable IPv6 link-local addressing
+LinkLocalAddressing=yes
+IPv6LinkLocalAddressGenerationMode=eui64
+IPv6DuplicateAddressDetection=both
+IPv6AcceptRA=yes
+IPv6SendRA=yes
 
 [DHCPServer]
 PoolOffset=2
@@ -15,3 +21,13 @@ PoolSize=1
 # EmitRouter=yes
 # DNS=192.168.7.1
 # EmitDNS=yes
+
+[IPv6SendRA]
+# Low priority to allow macOS ICS to take precedence
+RouterPreference=low
+# Short lifetime for quick adaptation to network changes
+RouterLifetimeSec=30
+# Don't advertise as gateway or DNS
+EmitDNS=no
+Managed=no
+OtherInformation=no

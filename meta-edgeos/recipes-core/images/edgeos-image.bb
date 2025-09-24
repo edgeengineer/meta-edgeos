@@ -20,7 +20,7 @@ IMAGE_INSTALL += " \
 
 # enable USB peripheral (gadget) support
 ENABLE_DWC2_PERIPHERAL = "${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', '1', '0')}"
-IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', ' usb-gadget', '')}"
+IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', ' usb-gadget radvd', '')}"
 
 EXTRA_IMAGEDEPENDS += "rpi-cmdline"
 do_image_wic[depends] += "rpi-cmdline:do_deploy wic-tools:do_populate_sysroot e2fsprogs-native:do_populate_sysroot"
