@@ -22,6 +22,9 @@ IMAGE_INSTALL += " \
 ENABLE_DWC2_PERIPHERAL = "${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', '1', '0')}"
 IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', ' usb-gadget radvd', '')}"
 
+# enable container runtime support
+IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_CONTAINER_RUNTIME') == '1', ' packagegroup-edgeos-container', '')}"
+
 EXTRA_IMAGEDEPENDS += "rpi-cmdline"
 do_image_wic[depends] += "rpi-cmdline:do_deploy wic-tools:do_populate_sysroot e2fsprogs-native:do_populate_sysroot"
 
@@ -35,6 +38,7 @@ BUILDCFG_VARS += " \
     EDGEOS_DEBUG_UART \
     EDGEOS_USB_GADGET \
     EDGEOS_PERSIST_JOURNAL_LOGS \
+    EDGEOS_CONTAINER_RUNTIME \
     "
 
 # Disable WIC's automatic fstab updates
