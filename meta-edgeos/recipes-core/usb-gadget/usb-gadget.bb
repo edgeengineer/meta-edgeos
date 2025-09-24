@@ -62,7 +62,7 @@ do_install() {
 SYSTEMD_SERVICE:${PN} = "edgeos-usbgadget-prepare.service"
 SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
-RDEPENDS:${PN} += "udev kmod iproute2 systemd-networkd"
+RDEPENDS:${PN} += "udev kmod iproute2 systemd-networkd edgeos-utils"
 
 FILES:${PN} += "\
     ${sbindir}/edgeos-usbgadget.sh \
