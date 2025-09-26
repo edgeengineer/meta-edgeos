@@ -41,8 +41,7 @@ EDGEOS_DEBUG_UART = "1"
 EDGEOS_USB_GADGET = "1"
 EDGEOS_PERSIST_JOURNAL_LOGS = "1"
 # Enable container runtime support (containerd, runc, CNI)
-# Set to "1" to include container runtime packages
-# EDGEOS_CONTAINER_RUNTIME = "0"
+EDGEOS_CONTAINER_RUNTIME = "1"
 
 # EdgeOS branding configuration (can be overridden)
 # EDGEOS_HOSTNAME = "edgeos-device"
