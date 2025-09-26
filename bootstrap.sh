@@ -59,7 +59,9 @@ BBLAYERS ?= " \
   ${TOPDIR}/../sources/meta-openembedded/meta-oe \
   ${TOPDIR}/../sources/meta-openembedded/meta-python \
   ${TOPDIR}/../sources/meta-openembedded/meta-networking \
+  ${TOPDIR}/../sources/meta-openembedded/meta-filesystems \
   ${TOPDIR}/../sources/meta-raspberrypi \
+  ${TOPDIR}/../sources/meta-virtualization \
   ${TOPDIR}/../meta-edgeos \
   "
 EOF
