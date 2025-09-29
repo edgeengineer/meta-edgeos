@@ -1,5 +1,8 @@
+SUMMARY = "Create 'admin' user (UID 1000) with home directory"
+DESCRIPTION = "Adds a non-root 'admin' user and /home/admin. Password is cleared at image time via EXTRA_USERS_PARAMS when EDGEOS_DISABLE_ROOT_SSH=1."
 LICENSE = "CLOSED"
 PR = "r0"
+
 inherit useradd
 
 USERADD_PACKAGES = "${PN}"
