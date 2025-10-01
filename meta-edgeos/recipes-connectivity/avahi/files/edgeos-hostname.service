@@ -1,7 +1,8 @@
 [Unit]
 Description=EdgeOS Hostname Setup
+Wants=edgeos-identity.service
+After=edgeos-identity.service local-fs.target
 Before=avahi-daemon.service network.target
-After=local-fs.target
 
 [Service]
 Type=oneshot
