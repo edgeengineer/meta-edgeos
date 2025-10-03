@@ -1,10 +1,12 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-SRC_URI += "file://generate-hostname.sh \
-            file://edgeos-mdns.service \
-            file://edgeos-hostname.service \
-            file://nsswitch.conf.append"
-
+SRC_URI += " \
+    file://edgeos-mdns.service \
+    file://generate-hostname.sh \
+    file://edgeos-hostname.service \
+    file://nsswitch.conf.append \
+    file://90-edgeos.preset \
+"
 # Ensure D-Bus support is enabled for proper service publishing
 PACKAGECONFIG += "dbus"
 
@@ -13,14 +15,11 @@ EXTRA_OECONF += "--with-avahi-user=avahi --with-avahi-group=avahi"
 
 inherit systemd
 
-SYSTEMD_SERVICE:${PN} += "edgeos-hostname.service"
-SYSTEMD_AUTO_ENABLE:${PN} = "enable"
-
 do_install:append() {
-    # Install hostname generation script to /usr/sbin
+    # Install hostname generation script + systemd unit (goes to sub-package)
     install -d ${D}${sbindir}
     install -m 0755 ${WORKDIR}/generate-hostname.sh ${D}${sbindir}/
-    
+
     # Install Avahi service file
     install -d ${D}${sysconfdir}/avahi/services
     install -m 0644 ${WORKDIR}/edgeos-mdns.service ${D}${sysconfdir}/avahi/services/
@@ -28,7 +27,7 @@ do_install:append() {
     # Install systemd service for hostname setup
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${WORKDIR}/edgeos-hostname.service ${D}${systemd_system_unitdir}/
-    
+
     # Ensure NSS mDNS is properly configured
     if [ -f ${D}${sysconfdir}/nsswitch.conf ]; then
         # Check if mdns is already configured
@@ -38,7 +37,7 @@ do_install:append() {
             cat ${WORKDIR}/nsswitch.conf.append >> ${D}${sysconfdir}/nsswitch.conf
         fi
     fi
-    
+
     # Enable Avahi daemon and ensure it starts with proper settings
     if [ -f ${D}${sysconfdir}/avahi/avahi-daemon.conf ]; then
         # Enable D-Bus support for proper service publishing
@@ -60,14 +59,32 @@ do_install:append() {
         # Set host name
         sed -i 's/^#*host-name=.*/# host-name is set dynamically by edgeos-hostname.service/' ${D}${sysconfdir}/avahi/avahi-daemon.conf
     fi
+
+    # Systemd preset to auto-enable hostname service by default
+    install -d ${D}${systemd_unitdir}/system-preset
+    install -m 0644 ${WORKDIR}/90-edgeos.preset \
+        ${D}${systemd_unitdir}/system-preset/90-edgeos.preset
 }
 
-FILES:${PN} += "${sbindir}/generate-hostname.sh \
-                ${sysconfdir}/avahi/services/edgeos-mdns.service \
-                ${systemd_system_unitdir}/edgeos-hostname.service"
+# --- What remains in the avahi main package (ONLY the .service for mDNS) ---
+FILES:${PN} += " ${sysconfdir}/avahi/services/edgeos-mdns.service "
 
-# Ensure avahi-daemon is enabled
-SYSTEMD_SERVICE:${PN} = "avahi-daemon.service edgeos-hostname.service"
+# --- Sub-package for EdgeOS hostname setup ---
+PACKAGES:prepend = "${PN}-edgeos-hostname "
+FILES:${PN}-edgeos-hostname = " \
+    ${sbindir}/generate-hostname.sh \
+    ${systemd_system_unitdir}/edgeos-hostname.service \
+    ${systemd_unitdir}/system-preset/90-edgeos.preset \
+"
 
-# Add runtime dependencies
-RDEPENDS:${PN} += "bash"
+RDEPENDS:${PN}-edgeos-hostname = "bash iproute2 systemd avahi-daemon"
+SYSTEMD_SERVICE:${PN}-edgeos-hostname = "edgeos-hostname.service"
+SYSTEMD_AUTO_ENABLE:${PN}-edgeos-hostname = "enable"
+
+# Postinstall hook: safety net in case preset doesn't run at image build time
+pkg_postinst:${PN}-edgeos-hostname () {
+    if [ -z "$D" ]; then
+        systemctl enable edgeos-hostname.service || true
+        systemctl start  edgeos-hostname.service || true
+    fi
+}

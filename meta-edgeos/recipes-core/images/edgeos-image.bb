@@ -43,3 +43,9 @@ BUILDCFG_VARS += " \
 
 # Disable WIC's automatic fstab updates
 WIC_CREATE_EXTRA_ARGS = "--no-fstab-update"
+
+# Provider for 'hostname' required by avahi-daemon
+IMAGE_INSTALL:append = " inetutils-hostname"
+
+# Avahi + the sub-package with the custom script/service
+IMAGE_INSTALL:append = " avahi-daemon avahi-edgeos-hostname"
