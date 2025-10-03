@@ -43,3 +43,5 @@ BUILDCFG_VARS += " \
 
 # Disable WIC's automatic fstab updates
 WIC_CREATE_EXTRA_ARGS = "--no-fstab-update"
+
+IMAGE_INSTALL:append = "expand-rootfs"
