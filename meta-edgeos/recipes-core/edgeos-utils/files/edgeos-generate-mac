@@ -1,0 +1,91 @@
+#!/bin/sh
+# EdgeOS MAC Address Generator
+# Generates deterministic, locally-administered MAC addresses based on device serial
+#
+# Usage: edgeos-generate-mac <interface-name>
+# Example: edgeos-generate-mac usb-dev
+#          edgeos-generate-mac usb-host
+
+set -eu
+
+# Function to generate a MAC address from a string
+generate_mac() {
+    local input="$1"
+
+    # Generate SHA-256 hash of the input
+    local hash=$(echo -n "$input" | sha256sum | awk '{print $1}')
+
+    # Take first 12 characters of the hash
+    local mac_base=${hash:0:12}
+
+    # Ensure locally administered address (set bit 1 of first octet)
+    # This means the second bit should be 1 (x2, x6, xA, xE)
+    local first_byte=${mac_base:0:2}
+    local second_char=$(printf '%x' $((0x$first_byte & 0xfe | 0x02)))
+
+    # Format as MAC address
+    printf "%02x:%02x:%02x:%02x:%02x:%02x\n" \
+       0x$second_char \
+       0x${mac_base:2:2} \
+       0x${mac_base:4:2} \
+       0x${mac_base:6:2} \
+       0x${mac_base:8:2} \
+       0x${mac_base:10:2}
+}
+
+# Get device serial number with fallback chain
+get_device_serial() {
+    local serial=""
+
+    # Try device tree serial (Raspberry Pi, some ARM devices)
+    if [ -f /proc/device-tree/serial-number ]; then
+        serial=$(cat /proc/device-tree/serial-number 2>/dev/null | tr -d '\0')
+        [ -n "$serial" ] && echo "$serial" && return 0
+    fi
+
+    # Try EdgeOS device UUID
+    if [ -f /etc/edgeos/device-uuid ]; then
+        serial=$(cat /etc/edgeos/device-uuid 2>/dev/null)
+        [ -n "$serial" ] && echo "$serial" && return 0
+    fi
+
+    # Try CPU serial from /proc/cpuinfo (older Raspberry Pi)
+    if [ -f /proc/cpuinfo ]; then
+        serial=$(awk -F': ' '/Serial/ {print $2}' /proc/cpuinfo 2>/dev/null | tr -d ' ')
+        [ -n "$serial" ] && echo "$serial" && return 0
+    fi
+
+    # Try primary network interface MAC as fallback
+    if [ -f /sys/class/net/eth0/address ]; then
+        serial=$(cat /sys/class/net/eth0/address 2>/dev/null)
+        [ -n "$serial" ] && echo "$serial" && return 0
+    fi
+
+    # Last resort: use machine ID
+    if [ -f /etc/machine-id ]; then
+        serial=$(cat /etc/machine-id 2>/dev/null)
+        [ -n "$serial" ] && echo "$serial" && return 0
+    fi
+
+    # Ultimate fallback: timestamp
+    echo "$(hostname)-$(date +%s)"
+}
+
+# Main logic
+main() {
+    if [ $# -ne 1 ]; then
+        echo "Usage: $0 <interface-suffix>" >&2
+        echo "Examples:" >&2
+        echo "  $0 usb-dev    # Generate MAC for device side" >&2
+        echo "  $0 usb-host   # Generate MAC for host side" >&2
+        exit 1
+    fi
+
+    local interface="$1"
+    local serial=$(get_device_serial)
+
+    # Generate unique, deterministic MAC for this interface
+    generate_mac "${serial}-${interface}"
+}
+
+main "$@"

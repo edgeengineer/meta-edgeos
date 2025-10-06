@@ -1,0 +1,32 @@
+[Unit]
+Description=EdgeOS Agent
+Documentation=https://github.com/edgeengineer/edge-agent
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/edge-agent
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=edge-agent
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+CPUQuota=200%
+
+# Container management support
+Delegate=yes
+KillMode=process
+
+# Environment file for configuration (optional)
+EnvironmentFile=-/etc/default/edge-agent
+
+[Install]
+WantedBy=multi-user.target

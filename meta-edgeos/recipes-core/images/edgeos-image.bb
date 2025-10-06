@@ -20,7 +20,10 @@ IMAGE_INSTALL += " \
 
 # enable USB peripheral (gadget) support
 ENABLE_DWC2_PERIPHERAL = "${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', '1', '0')}"
-IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', ' usb-gadget', '')}"
+IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_USB_GADGET') == '1', ' usb-gadget radvd', '')}"
+
+# enable container runtime support
+IMAGE_INSTALL += " ${@oe.utils.ifelse(d.getVar('EDGEOS_CONTAINER_RUNTIME') == '1', ' packagegroup-edgeos-container', '')}"
 
 EXTRA_IMAGEDEPENDS += "rpi-cmdline"
 do_image_wic[depends] += "rpi-cmdline:do_deploy wic-tools:do_populate_sysroot e2fsprogs-native:do_populate_sysroot"
@@ -35,6 +38,7 @@ BUILDCFG_VARS += " \
     EDGEOS_DEBUG_UART \
     EDGEOS_USB_GADGET \
     EDGEOS_PERSIST_JOURNAL_LOGS \
+    EDGEOS_CONTAINER_RUNTIME \
     "
 
 # Disable WIC's automatic fstab updates
@@ -49,3 +53,8 @@ edgeos_make_admin_nopass () {
         sed -i 's/^admin:[^:]*:/admin::/' ${IMAGE_ROOTFS}/etc/shadow || true
     fi
 }
+# Provider for 'hostname' required by avahi-daemon
+IMAGE_INSTALL:append = " inetutils-hostname"
+
+# Avahi + the sub-package with the custom script/service
+IMAGE_INSTALL:append = " avahi-daemon avahi-edgeos-hostname"
