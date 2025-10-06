@@ -45,6 +45,15 @@ BUILDCFG_VARS += " \
 WIC_CREATE_EXTRA_ARGS = "--no-fstab-update"
 
 IMAGE_INSTALL:append = "expand-rootfs"
+IMAGE_INSTALL += "${@bb.utils.contains('EDGEOS_DISABLE_ROOT_SSH', '1', 'edgeos-user', '', d)}"
+
+ROOTFS_POSTPROCESS_COMMAND += "edgeos_make_admin_nopass;"
+
+edgeos_make_admin_nopass () {
+    if [ "${EDGEOS_DISABLE_ROOT_SSH}" = "1" ] && [ -f ${IMAGE_ROOTFS}/etc/shadow ]; then
+        sed -i 's/^admin:[^:]*:/admin::/' ${IMAGE_ROOTFS}/etc/shadow || true
+    fi
+}
 # Provider for 'hostname' required by avahi-daemon
 IMAGE_INSTALL:append = " inetutils-hostname"
 
