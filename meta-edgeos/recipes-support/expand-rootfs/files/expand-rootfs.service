@@ -1,0 +1,17 @@
+[Unit]
+Description=Expand root partition and filesystem (first boot)
+DefaultDependencies=no
+After=local-fs.target systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+ConditionPathExists=!/var/lib/expand-rootfs.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/expand-rootfs.sh
+RemainAfterExit=no
+TimeoutSec=0
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
