@@ -12,6 +12,7 @@ RDEPENDS:${PN} = " \
     libstdc++ \
     util-linux \
     connman \
+    connman-client \
     tzdata \
     zstd \
     iproute2 \
