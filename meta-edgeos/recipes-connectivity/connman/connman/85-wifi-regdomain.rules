@@ -1,0 +1,6 @@
+# Set Wi-Fi regulatory domain when an 802.11 PHY appears
+# Country code read from /etc/regdomain (fallback US)
+# Note: rfkill state is managed by ConnMan - WiFi is disabled by default for power saving
+ACTION=="add", SUBSYSTEM=="ieee80211", KERNEL=="phy[0-9]*", \
+  IMPORT{program}="/bin/sh -c 'c=$(cat /etc/regdomain 2>/dev/null || echo US); printf \"COUNTRY=%%s\\n\" \"$c\"'", \
+  RUN+="/usr/sbin/iw reg set $env{COUNTRY}"

@@ -1,0 +1,23 @@
+[Unit]
+Description=WiFi registration nudge for ConnMan
+# Run after ConnMan starts to ensure wpa_supplicant registers wlan0
+After=connman.service
+# Only on devices with WiFi hardware
+ConditionPathExists=/sys/class/net/wlan0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# If WiFi is enabled, toggle it to ensure wpa_supplicant registration
+ExecStart=/bin/sh -c '\
+  sleep 2; \
+  state=$(connmanctl technologies | awk "/Type = wifi/,/Powered/" | grep "Powered" | awk "{print \\$3}"); \
+  if [ "$state" = "True" ]; then \
+    connmanctl disable wifi; \
+    sleep 1; \
+    connmanctl enable wifi; \
+  fi \
+'
+
+[Install]
+WantedBy=multi-user.target

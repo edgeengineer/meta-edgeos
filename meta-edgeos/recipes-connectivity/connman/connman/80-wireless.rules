@@ -1,0 +1,3 @@
+# Bring up wireless interfaces so wpa_supplicant can register them
+# wpa_supplicant in D-Bus mode only registers interfaces that are UP
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="wlan*", RUN+="/sbin/ip link set %k up"
