@@ -1,33 +1,24 @@
 #/etc/systemd/network/10-usb0.network
+# USB gadget network configuration
+#
+# Strategy: DHCP client with link-local fallback
+# - If host runs DHCP server (e.g., macOS ICS): get IP via DHCP
+# - If no DHCP server: auto-configure link-local (169.254.x.x)
+# - Always available via IPv6 link-local (fe80::...)
+#
+# This avoids DHCP server conflicts with macOS Internet Connection Sharing
+# while maintaining connectivity in all scenarios.
 
 [Match]
 Name=usb0
 
 [Network]
-Address=192.168.7.1/24
-DHCPServer=yes
-ConfigureWithoutCarrier=yes
-# Enable IPv6 link-local addressing
+# Request DHCP address from host
+DHCP=yes
+# Fallback to link-local if no DHCP server responds
 LinkLocalAddressing=yes
+ConfigureWithoutCarrier=yes
+
+# IPv6 link-local configuration
 IPv6LinkLocalAddressGenerationMode=eui64
-IPv6DuplicateAddressDetection=both
 IPv6AcceptRA=yes
-IPv6SendRA=yes
-
-[DHCPServer]
-PoolOffset=2
-PoolSize=1
-# Optional extras:
-# EmitRouter=yes
-# DNS=192.168.7.1
-# EmitDNS=yes
-
-[IPv6SendRA]
-# Low priority to allow macOS ICS to take precedence
-RouterPreference=low
-# Short lifetime for quick adaptation to network changes
-RouterLifetimeSec=30
-# Don't advertise as gateway or DNS
-EmitDNS=no
-Managed=no
-OtherInformation=no
