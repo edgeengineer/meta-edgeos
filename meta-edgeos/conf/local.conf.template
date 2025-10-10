@@ -35,6 +35,9 @@ ENABLE_DWC2_PERIPHERAL = "1"
 RASPBERRYPI_CAMERA_V2 = "1"
 RASPBERRYPI_CAMERA_V3 = "1"
 
+# Kernel version - use 6.12 for latest improvements
+PREFERRED_VERSION_linux-raspberrypi = "6.12.%"
+
 # EdgeOS feature flags
 EDGEOS_DEBUG = "1"
 EDGEOS_DEBUG_UART = "1"

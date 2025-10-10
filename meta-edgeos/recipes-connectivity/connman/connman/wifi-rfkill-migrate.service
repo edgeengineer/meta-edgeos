@@ -1,0 +1,17 @@
+[Unit]
+Description=Migrate ConnMan WiFi policy into rfkill (one-time)
+# Run early, after udev settles and before ConnMan
+After=systemd-udev-settle.service
+Before=connman.service
+DefaultDependencies=no
+# Only run once - create marker file on success
+ConditionPathExists=!/var/lib/systemd/wifi-rfkill-migrated
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/wifi-rfkill-migrate.sh
+# Create marker to prevent running again
+ExecStartPost=/bin/sh -c 'mkdir -p /var/lib/systemd && touch /var/lib/systemd/wifi-rfkill-migrated'
+
+[Install]
+WantedBy=multi-user.target
