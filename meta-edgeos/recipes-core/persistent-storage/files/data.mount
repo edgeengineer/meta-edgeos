@@ -1,0 +1,13 @@
+[Unit]
+Description=Mount persistent data partition
+After=local-fs-pre.target
+Before=local-fs.target
+
+[Mount]
+What=/dev/disk/by-partlabel/data
+Where=/data
+Type=ext4
+Options=defaults,noatime
+
+[Install]
+WantedBy=multi-user.target

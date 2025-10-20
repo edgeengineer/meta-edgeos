@@ -45,3 +45,5 @@ BUILDCFG_VARS += " \
 WIC_CREATE_EXTRA_ARGS = "--no-fstab-update"
 
 IMAGE_INSTALL:append = "expand-rootfs"
+
+IMAGE_INSTALL:append = " persistent-storage"

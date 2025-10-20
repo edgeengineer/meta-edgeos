@@ -2,9 +2,6 @@ SUMMARY = "First-boot rootfs auto-expansion service"
 DESCRIPTION = "Expands the active root partition and grows the filesystem on first boot."
 LICENSE = "CLOSED"
 
-PR = "r4"
-
-
 SRC_URI = " \
     file://expand-rootfs.sh \
     file://expand-rootfs.service \

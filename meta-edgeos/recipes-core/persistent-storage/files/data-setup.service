@@ -1,0 +1,12 @@
+[Unit]
+Description=Prepare /data for application
+After=data.mount
+Requires=data.mount
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/data-setup.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
