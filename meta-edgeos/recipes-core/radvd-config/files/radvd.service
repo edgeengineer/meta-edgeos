@@ -1,0 +1,15 @@
+[Unit]
+Description=IPv6 Router Advertisement Daemon
+After=network-online.target edgeos-usbgadget-prepare.service
+Wants=network-online.target
+Requires=edgeos-usbgadget-prepare.service
+
+[Service]
+Type=forking
+ExecStartPre=/bin/sh -c 'test -e /sys/class/net/usb0 || sleep 2'
+ExecStart=/usr/sbin/radvd -C /etc/radvd.conf
+ExecReload=/bin/kill -HUP \$MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

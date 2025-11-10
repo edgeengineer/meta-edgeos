@@ -6,7 +6,7 @@ Wants=systemd-udevd.service systemd-networkd.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/usb-gadget.sh prepare
+ExecStart=/usr/sbin/edgeos-usbgadget-init.sh prepare
 
 # Bind right away (autodetects the UDC), then bring usb0 admin-UP
 ExecStartPost=/usr/sbin/usb-gadget.sh bind

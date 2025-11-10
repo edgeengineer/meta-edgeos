@@ -1,16 +1,14 @@
 [Unit]
-Description=EdgeOS Device Identity and mDNS Setup
-DefaultDependencies=no
+Description=EdgeOS mDNS Setup
+After=network.target edgeos-usbgadget.service edgeos-uuid-generate.service edgeos-device-name-generate.service
 Before=avahi-daemon.service
-After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/generate-uuid.sh
 ExecStart=/usr/bin/update-mdns-uuid.sh
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=sysinit.target
+WantedBy=multi-user.target

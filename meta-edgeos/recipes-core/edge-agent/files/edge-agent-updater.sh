@@ -7,20 +7,20 @@
 set -e
 
 # Load configuration
-if [ -f /etc/default/edge-agent ]; then
-    source /etc/default/edge-agent
+if [ -f /etc/default/wendy-agent ]; then
+    source /etc/default/wendy-agent
 fi
 
 # Default values if not configured
-GITHUB_REPO="${EDGE_AGENT_GITHUB_REPO:-edgeengineer/edge-agent}"
+GITHUB_REPO="${EDGE_AGENT_GITHUB_REPO:-wendylabsinc/wendy-agent}"
 VERSION="${EDGE_AGENT_VERSION:-latest}"
 ARCH="aarch64"  # Hardcoded for RPi
 
 # Paths
 INSTALL_DIR="/usr/local/bin"
-BACKUP_DIR="/opt/edgeos/bin"
-BINARY_NAME="edge-agent"
-VERSION_FILE="/var/lib/edge-agent/current-version"
+BACKUP_DIR="/opt/wendy/bin"
+BINARY_NAME="wendy-agent"
+VERSION_FILE="/var/lib/wendy-agent/current-version"
 
 # Logging
 log() {
@@ -181,14 +181,14 @@ perform_update() {
 
 # Main execution
 main() {
-    log "Starting edge-agent update check"
+    log "Starting wendy-agent update check"
     
     # Check network connectivity first
     check_network
     
     # Check if binary exists at all
-    if [ ! -f "${INSTALL_DIR}/${BINARY_NAME}" ] || grep -q "Edge-agent not yet installed" "${INSTALL_DIR}/${BINARY_NAME}" 2>/dev/null; then
-        log "Edge-agent not installed, performing initial download"
+    if [ ! -f "${INSTALL_DIR}/${BINARY_NAME}" ] || grep -q "Wendy-agent not yet installed" "${INSTALL_DIR}/${BINARY_NAME}" 2>/dev/null; then
+        log "Wendy-agent not installed, performing initial download"
         perform_update
         exit $?
     fi

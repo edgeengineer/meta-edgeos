@@ -1,6 +1,6 @@
 [Unit]
-Description=EdgeOS Agent Updater
-Documentation=https://github.com/edgeengineer/edge-agent
+Description=WendyOS Agent Updater
+Documentation=https://github.com/wendylabsinc/wendy-agent
 After=network-online.target
 Wants=network-online.target
 
@@ -9,17 +9,17 @@ Type=oneshot
 ExecStart=/opt/edgeos/bin/edge-agent-updater.sh
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=edge-agent-updater
+SyslogIdentifier=wendy-agent-updater
 
 # Security settings
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
-ReadWritePaths=/usr/local/bin /opt/edgeos/bin /var/lib/edge-agent /tmp
+ReadWritePaths=/usr/local/bin /opt/edgeos/bin /opt/wendy /var/lib/wendy-agent /tmp
 
 # Environment
-EnvironmentFile=-/etc/default/edge-agent
+EnvironmentFile=-/etc/default/wendy-agent
 
 [Install]
 WantedBy=multi-user.target

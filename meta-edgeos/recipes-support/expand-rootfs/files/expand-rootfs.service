@@ -1,17 +1,18 @@
 [Unit]
-Description=Expand root partition and filesystem (first boot)
-DefaultDependencies=no
-After=local-fs.target systemd-udev-settle.service
-Wants=systemd-udev-settle.service
-ConditionPathExists=!/var/lib/expand-rootfs.done
+Description=EdgeOS First Boot Rootfs Resize
+After=nv.service
+Before=nv-late-init.service
+ConditionPathExists=!/etc/edgeos/.rootfs-resized
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/expand-rootfs.sh
-RemainAfterExit=no
-TimeoutSec=0
-StandardOutput=journal+console
-StandardError=journal+console
+# Create the trigger file that nv-late-init.sh checks
+ExecStartPre=/bin/mkdir -p /etc/nv
+ExecStartPre=/bin/touch /etc/nv/nvautoconfig
+# Mark that we've triggered resize (one-time only)
+ExecStart=/bin/mkdir -p /etc/edgeos
+ExecStart=/bin/touch /etc/edgeos/.rootfs-resized
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
