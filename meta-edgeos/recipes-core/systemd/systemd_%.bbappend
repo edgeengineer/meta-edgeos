@@ -1,8 +1,30 @@
 
 inherit journal-persist
 
-# make sure the systemd recipe builds the networkd subpackage
-PACKAGECONFIG:append = " networkd"
+# make sure the systemd recipe builds the networkd and resolved subpackages
+# resolved is needed for proper DNS resolution in containers
+PACKAGECONFIG:append = " networkd resolved"
+
+# Configure systemd-resolved for proper DNS in containers
+do_install:append() {
+    # Enable systemd-resolved service
+    install -d ${D}${sysconfdir}/systemd/system/multi-user.target.wants
+    ln -sf ${systemd_system_unitdir}/systemd-resolved.service \
+        ${D}${sysconfdir}/systemd/system/multi-user.target.wants/systemd-resolved.service
+
+    # Configure resolved to create /run/systemd/resolve/resolv.conf
+    # This file contains actual DNS servers (not the 127.0.0.53 stub)
+    install -d ${D}${sysconfdir}/systemd/resolved.conf.d
+    cat > ${D}${sysconfdir}/systemd/resolved.conf.d/10-edgeos.conf << 'EOF'
+[Resolve]
+# Use this for fallback DNS if no other DNS is available
+FallbackDNS=8.8.8.8 1.1.1.1
+# Don't use LLMNR (Link-Local Multicast Name Resolution)
+LLMNR=no
+# Use mDNS for .local domains (Avahi compatibility)
+MulticastDNS=yes
+EOF
+}
 
 # systemd persistent log
 # Install the drop-in and tmpfiles rule ONLY when this feature is enabled.
@@ -22,6 +44,12 @@ EOF
 d     /var/log/journal      2755  root systemd-journal   -   -
 EOF
 }
+
+# Ship systemd-resolved configuration
+FILES:${PN}:append = " \
+    ${sysconfdir}/systemd/system/multi-user.target.wants/systemd-resolved.service \
+    ${sysconfdir}/systemd/resolved.conf.d/10-edgeos.conf \
+    "
 
 # systemd persistent log
 # Only ship these files when the feature is enabled.
